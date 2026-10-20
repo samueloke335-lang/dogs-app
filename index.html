@@ -121,7 +121,7 @@ nav b.on span{filter:grayscale(1)}
 </section>
 
 <section id="invite"><div class="card"><h3>Invite friends</h3>
- <p>Earn <b id="refTotal"></b> DOGS for each friend, paid in 3 steps.</p>
+ <p>Earn <b id="refTotal"></b> DOGS for each friend, paid in 3 steps. A friend only counts if this is their first time opening the app.</p>
  <div class="row"><span>Friend opens the app</span><b id="r1"></b></div>
  <div class="row"><span>Friend finishes 3 tasks</span><b id="r2"></b></div>
  <div class="row"><span>Friend makes a first withdrawal</span><b id="r3"></b></div>
@@ -145,7 +145,7 @@ const $=id=>document.getElementById(id), tg=window.Telegram&&Telegram.WebApp;
 if(tg){try{tg.ready();tg.expand()}catch(e){}}
 const API="https://ytrvqpjdghvjcjwtscyv.supabase.co/functions/v1/dogs-api";
 // Display values only. The server decides every real reward, limit and fee (see the settings table).
-const CFG={bot:"https://t.me/DOGSAIRDROP11BOT",ref:{open:330,tasks:70,withdraw:100},min:5000,max:7000,fee:0.15,perDay:2,claim:200,claimHours:4,
+const CFG={bot:"https://t.me/DOGSAIRDROP11BOT",app:"", /* app: put your Mini App short name here only if you made it with /newapp */ ref:{open:330,tasks:70,withdraw:100},min:5000,max:7000,fee:0.15,perDay:2,claim:200,claimHours:4,
  wheel:[5,10,15,20,30,50],ci:[20,30,40,50,60,80,120],
  tasks:[{id:"t1",t:"Join our Telegram channel",r:300,u:"https://t.me/YOUR_CHANNEL"},
         {id:"t2",t:"Subscribe on YouTube",r:300,u:"https://youtube.com/@YOUR_CHANNEL"},
@@ -154,7 +154,7 @@ const ERR={too_soon:"Not ready yet",already_done:"Already done",no_plays_left:"N
  below_min:"Minimum withdrawal is "+CFG.min.toLocaleString()+" DOGS",above_max:"Maximum withdrawal is "+CFG.max.toLocaleString()+" DOGS",
  insufficient:"Not enough DOGS",bad_wallet:"Enter a valid wallet address",bad_amount:"Enter a valid amount",pending_exists:"You already have a pending withdrawal",
  unauthorized:"Open this app from Telegram",network:"Network problem. Try again.",not_allowed:"This account is not allowed",server:"Server error. Try again."};
-let ST={balance:0,last_claim:null,ci_streak:0,ci_done_today:false,tasks:[],plays:{},friends:[],withdrawals:[]},PEND=null,busy=false;
+let ST={balance:0,last_claim:null,ci_streak:0,ci_done_today:false,tasks:[],plays:{},friends:[],withdrawals:[]},PEND=null,busy=false,loaded=false;
 const U=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user, uid=U?U.id:"", uname=U?U.first_name:"friend";
 const fmt=n=>Math.round(n).toLocaleString();
 function toast(m){const t=$("toast");t.textContent=m;t.className="on";clearTimeout(t._);t._=setTimeout(()=>t.className="",2400)}
@@ -170,11 +170,11 @@ const left=g=>CFG.perDay-((ST.plays||{})[g]||0);
 if(!tg||!tg.initData){document.body.insertAdjacentHTML("beforeend",'<div id="gate" style="position:fixed;inset:0;z-index:30;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px"><img src="'+$("dog").src+'" style="width:110px;border-radius:50%"><h3>Open this app from Telegram</h3><p>This app only works inside the DOGS bot.</p><a href="'+CFG.bot+'" style="color:#000;background:#fff;padding:12px 22px;border-radius:99px;font-weight:800;text-decoration:none;margin-top:10px">Open the bot</a></div>')}
 
 function render(){
- $("who").textContent="Hi, "+uname;$("bal").textContent=fmt(ST.balance);
+ $("who").textContent="Hi, "+uname;$("bal").textContent=loaded?fmt(ST.balance):"…";
  const lv=Math.floor(ST.balance/5000)+1,into=ST.balance%5000;
  $("lvl").textContent="Level "+lv+" · "+fmt(5000-into)+" DOGS to next level";$("xp").style.width=(into/50)+"%";
  const wait=ST.last_claim?new Date(ST.last_claim).getTime()+CFG.claimHours*3600000-Date.now():0;
- $("claimBtn").disabled=wait>0||busy;$("claimBtn").textContent=wait>0?"Come back later":"Claim "+CFG.claim+" DOGS";
+ $("claimBtn").disabled=wait>0||busy||!loaded;$("claimBtn").textContent=wait>0?"Come back later":"Claim "+CFG.claim+" DOGS";
  $("claimInfo").textContent=wait>0?"Next claim in "+Math.floor(wait/3600000)+"h "+Math.ceil(wait%3600000/60000)+"m":"Your claim is ready.";
  const dn=ST.tasks||[];
  $("taskList").innerHTML=CFG.tasks.map(k=>`<div class="row"><span>${k.t}<br><small style="color:#fff">+${k.r} DOGS</small></span>${dn.includes(k.id)?'<span class="tag ok">Done</span>':`<button style="width:auto;margin:0;padding:8px 14px" data-task="${k.id}">Start</button>`}</div>`).join("");
@@ -182,7 +182,7 @@ function render(){
  $("boneInfo").textContent=left("bones")+" of "+CFG.perDay+" rounds left today.";$("boneBtn").disabled=left("bones")<=0||playing;
  $("refTotal").textContent=fmt(CFG.ref.open+CFG.ref.tasks+CFG.ref.withdraw);
  $("r1").textContent="+"+CFG.ref.open;$("r2").textContent="+"+CFG.ref.tasks;$("r3").textContent="+"+CFG.ref.withdraw;
- $("refLink").value=CFG.bot+"?startapp="+uid;
+ $("refLink").value=(CFG.app?CFG.bot+"/"+CFG.app:CFG.bot)+"?startapp="+uid;
  const fr=ST.friends||[];
  $("refList").innerHTML=fr.length?fr.map(r=>`<div class="row"><span>${esc(r.name||"Friend")}</span><span class="tag ${r.withdrawn?'ok':''}">${r.withdrawn?"Withdrawn":r.tasks?"Tasks done":"Opened"}</span></div>`).join(""):"<p>No friends yet. Share your link to start earning.</p>";
  $("mn").textContent=fmt(CFG.min);$("mx").textContent=fmt(CFG.max);$("fe").textContent=CFG.fee*100+"%";calc();
@@ -191,7 +191,7 @@ function render(){
  $("stF").textContent=fr.length;$("stT").textContent=dn.length+"/"+CFG.tasks.length;$("stW").textContent=fmt(wd.filter(h=>h.status==="paid").reduce((s,h)=>s+h.amount,0));
  const n=ST.ci_streak||0;
  $("days").innerHTML=CFG.ci.map((v,i)=>`<span class="${i<n?"on":""}">${i<n?"✓":v}</span>`).join("");
- $("ciBtn").disabled=!!ST.ci_done_today||busy;$("ciBtn").textContent=ST.ci_done_today?"Checked in today":"Check in · +"+CFG.ci[n>=7?0:n]+" DOGS";
+ $("ciBtn").disabled=!!ST.ci_done_today||busy||!loaded;$("ciBtn").textContent=ST.ci_done_today?"Checked in today":"Check in · +"+CFG.ci[n>=7?0:n]+" DOGS";
  gamesUI()}
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function calc(){const a=+$("amt").value||0;$("calc").textContent=a?`Fee ${fmt(a*CFG.fee)} DOGS. You receive ${fmt(a*(1-CFG.fee))} DOGS.`:""}
@@ -282,7 +282,10 @@ const GAME={
    const ms=Date.now()-go;const r=await prize("react");if(r>=0)fin(r,ms+" ms")}}};
 
 // start: register with the server, then load the real state
-(async()=>{render();if(tg&&tg.initData){const j=await api("init");if(j&&j.error&&j.error!=="unauthorized")toast(errOf(j));render()}})();
+function banner(on){let b=$("ban");if(!b){document.body.insertAdjacentHTML("beforeend",'<div id="ban" style="position:fixed;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top));z-index:25;background:#fff;color:#000;border-radius:14px;padding:12px;font-weight:800;text-align:center;display:none">Could not load your balance. Tap to retry.</div>');b=$("ban");b.onclick=boot}b.style.display=on?"block":"none"}
+async function boot(){if(!(tg&&tg.initData))return;const j=await api("init");if(bad(j)){banner(true)}else{loaded=true;banner(false)}render()}
+render();boot();
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&loaded)api("state").then(render)});
 setInterval(render,30000);
 
 // ===== Live background =====
