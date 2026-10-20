@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>DOGS Admin</title>
+<style>
+:root{--line:rgba(255,255,255,.14);--panel:rgba(255,255,255,.06);--mute:#8e8e93;--glow:150,200,255;--ok:#3ecf8e;--bad:#ff5d5d}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#000;color:#fff;font-family:"Trebuchet MS",system-ui,sans-serif}
+body{padding:env(safe-area-inset-top) 12px calc(24px + env(safe-area-inset-bottom));max-width:640px;margin:auto}
+h2{margin:16px 0 4px}
+p,small{color:var(--mute);font-size:13px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;margin:10px 0}
+button,input,textarea{font:inherit;border-radius:12px}
+button{border:0;background:#fff;color:#000;font-weight:800;padding:10px 14px}
+button.alt{background:transparent;color:#fff;border:1px solid var(--line)}
+button.ok{background:var(--ok)}button.bad{background:var(--bad);color:#fff}
+button:disabled{opacity:.4}
+input,textarea{width:100%;padding:12px;background:#0b0b0b;color:#fff;border:1px solid var(--line);margin-top:8px}
+textarea{min-height:90px;font-family:monospace;font-size:12px}
+.tabs{display:flex;gap:6px;position:sticky;top:0;background:#000;padding:10px 0;z-index:2;overflow-x:auto}
+.tabs button{flex:1;background:transparent;color:var(--mute);border:1px solid var(--line);white-space:nowrap}
+.tabs button.on{background:#fff;color:#000;box-shadow:0 0 18px rgba(var(--glow),.5)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;text-align:center}
+.stat b{display:block;font-size:22px}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:14px;padding:6px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.tag{font-size:12px;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.12)}
+.tag.paid{background:var(--ok);color:#000}.tag.rejected{background:var(--bad)}
+.w{word-break:break-all;font-family:monospace;font-size:12px;color:#cde;background:#0b0b0b;border-radius:8px;padding:6px;margin:6px 0}
+.btns{display:flex;gap:8px;margin-top:8px}.btns button{flex:1}
+#login{margin-top:30vh;text-align:center}
+</style></head>
+<body>
+<div id="login" style="display:none">
+ <h2>DOGS Admin</h2><p>Enter your admin key.</p>
+ <input id="key" type="password" placeholder="Admin key" autocomplete="off">
+ <button id="go" style="width:100%;margin-top:10px">Sign in</button><p id="lerr" style="color:var(--bad)"></p>
+</div>
+<div id="app" style="display:none">
+ <div class="tabs" id="tabs"><button data-t="stats" class="on">Stats</button><button data-t="wd">Withdrawals</button><button data-t="users">Users</button><button data-t="set">Settings</button><button id="out">Exit</button></div>
+ <div id="v"></div>
+</div>
+<script>
+const API="https://ytrvqpjdghvjcjwtscyv.supabase.co/functions/v1/dogs-admin";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=n=>Math.round(+n||0).toLocaleString();
+let KEY="";try{KEY=sessionStorage.getItem("dk")||""}catch(e){}
+async function call(action,extra){
+ let r;try{r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({key:KEY,action},extra||{}))})}catch(e){throw new Error("Network problem")}
+ if(r.status===401){logout();throw new Error("Wrong key")}
+ const j=await r.json();if(j.error)throw new Error(j.error);return j.data}
+function logout(){KEY="";try{sessionStorage.removeItem("dk")}catch(e){}show()}
+function show(){$("login").style.display=KEY?"none":"block";$("app").style.display=KEY?"block":"none";if(KEY)tab("stats")}
+$("go").onclick=async()=>{KEY=$("key").value.trim();if(!KEY)return;$("lerr").textContent="Checking…";
+ try{await call("stats");try{sessionStorage.setItem("dk",KEY)}catch(e){}$("lerr").textContent="";$("key").value="";show()}catch(e){KEY="";$("lerr").textContent=e.message}};
+$("out").onclick=logout;
+$("tabs").onclick=e=>{const t=e.target.dataset&&e.target.dataset.t;if(t)tab(t)};
+function tab(t){document.querySelectorAll("#tabs button[data-t]").forEach(b=>b.classList.toggle("on",b.dataset.t===t));({stats,wd:()=>wd("pending"),users:()=>users(""),set:settings})[t]()}
+const err=e=>{$("v").innerHTML='<div class="card" style="color:var(--bad)">'+esc(e.message)+'</div>'};
+const load=()=>{$("v").innerHTML="<p>Loading…</p>"};
+
+async function stats(){load();try{const s=await call("stats");
+ $("v").innerHTML=`<h2>Overview</h2><div class="grid">
+ <div class="stat"><b>${fmt(s.users)}</b><small>Users</small></div><div class="stat"><b>${fmt(s.new_today)}</b><small>New today</small></div>
+ <div class="stat"><b>${fmt(s.pending_count)}</b><small>Pending withdrawals</small></div><div class="stat"><b>${fmt(s.pending_sum)}</b><small>Pending DOGS to pay</small></div>
+ <div class="stat"><b>${fmt(s.paid_count)}</b><small>Paid withdrawals</small></div><div class="stat"><b>${fmt(s.paid_sum)}</b><small>DOGS paid out</small></div>
+ <div class="stat"><b>${fmt(s.total_balance)}</b><small>DOGS held by users</small></div><div class="stat"><b>${fmt(s.banned)}</b><small>Banned</small></div></div>`}catch(e){err(e)}}
+
+async function wd(st){load();try{const d=await call("withdrawals",{status:st});
+ const bar=["pending","paid","rejected"].map(x=>`<button class="${x===st?"":"alt"}" onclick="wd('${x}')">${x[0].toUpperCase()+x.slice(1)}</button>`).join("");
+ $("v").innerHTML=`<h2>Withdrawals</h2><div class="btns">${bar}</div>`+(d.length?d.map(w=>`<div class="card">
+  <div class="row"><b>${fmt(w.amount)} DOGS</b><span class="tag ${w.status}">${w.status}</span></div>
+  <small>${esc(w.users&&w.users.first_name||"User")} · ID ${w.tg_id} · ${esc(String(w.created_at).slice(0,16).replace("T"," "))}</small>
+  <div class="row"><span>Send to user (after 15% fee)</span><b>${fmt(w.net)}</b></div>
+  <div class="w" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.textContent);this.style.outline='1px solid #3ecf8e'">${esc(w.wallet)}</div><small>Tap the address to copy</small>
+  ${w.status==="pending"?`<div class="btns"><button class="ok" onclick="setW('${w.id}','paid')">Mark paid</button><button class="bad" onclick="setW('${w.id}','rejected')">Reject</button></div>`:""}</div>`).join(""):"<p>Nothing here.</p>")}catch(e){err(e)}}
+async function setW(id,s){
+ const msg=s==="paid"?"Mark as PAID? Do this only after you have sent the DOGS. It also releases the inviter's bonus.":"REJECT and refund the full amount to the user?";
+ if(!confirm(msg))return;
+ try{const r=await call("setWithdrawal",{id,status:s});if(r&&r.error)throw new Error(r.error);wd("pending")}catch(e){alert("Failed: "+e.message)}}
+
+async function users(q){$("v").innerHTML=`<h2>Users</h2><input id="uq" placeholder="Search name or Telegram ID" value="${esc(q)}"><button style="width:100%;margin-top:8px" onclick="users(document.getElementById('uq').value)">Search</button><div id="ul"><p>Loading…</p></div>`;
+ try{const d=await call("users",{q});$("ul").innerHTML=d.length?d.map(u=>`<div class="card" onclick="user(${u.tg_id})"><div class="row"><b>${esc(u.first_name||"User")}</b><span>${fmt(u.balance)} DOGS</span></div><small>ID ${u.tg_id}${u.banned?" · BANNED":""}${u.has_withdrawn?" · has withdrawn":""}</small></div>`).join(""):"<p>No users found.</p>"}catch(e){$("ul").innerHTML=esc(e.message)}}
+async function user(id){load();try{const d=await call("user",{id});const u=d.user;if(!u)return err(new Error("User not found"));
+ $("v").innerHTML=`<button class="alt" onclick="users('')">← Back</button><h2>${esc(u.first_name||"User")}</h2><p>ID ${u.tg_id} · joined ${esc(String(u.created_at).slice(0,10))}</p>
+ <div class="grid"><div class="stat"><b>${fmt(u.balance)}</b><small>Balance</small></div><div class="stat"><b>${fmt(d.friends)}</b><small>Friends invited</small></div></div>
+ <div class="btns"><button class="${u.banned?"ok":"bad"}" onclick="ban(${u.tg_id},${!u.banned})">${u.banned?"Unban user":"Ban user"}</button></div>
+ <div class="card"><b>Recent activity</b>${d.ledger.length?d.ledger.map(l=>`<div class="row"><span>${esc(l.reason)}<br><small>${esc(String(l.created_at).slice(0,16).replace("T"," "))}</small></span><b style="color:${l.amount<0?"var(--bad)":"var(--ok)"}">${l.amount>0?"+":""}${fmt(l.amount)}</b></div>`).join(""):"<p>No activity.</p>"}</div>`}catch(e){err(e)}}
+async function ban(id,b){if(!confirm(b?"Ban this user? They will not be able to earn or withdraw.":"Unban this user?"))return;try{await call("ban",{id,banned:b});user(id)}catch(e){alert(e.message)}}
+
+async function settings(){load();try{const d=await call("settings");
+ $("v").innerHTML=`<h2>Settings</h2><p>Careful: these control all rewards. Keep the same format when you edit. Odds are [prize, weight] pairs; a bigger weight means it comes up more often.</p>`+d.map(s=>`<div class="card"><b>${esc(s.key)}</b><textarea id="s_${esc(s.key)}">${esc(JSON.stringify(s.value,null,1))}</textarea><button style="width:100%;margin-top:8px" onclick="saveS('${esc(s.key)}')">Save ${esc(s.key)}</button></div>`).join("")}catch(e){err(e)}}
+async function saveS(k){const v=document.getElementById("s_"+k).value;if(!confirm("Save new "+k+" settings? They apply to all users immediately."))return;
+ try{await call("setSetting",{key:k,value:v});alert("Saved")}catch(e){alert("Not saved: "+e.message)}}
+show();
+</script>
+</body></html>
