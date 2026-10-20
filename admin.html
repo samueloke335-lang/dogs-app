@@ -40,7 +40,7 @@ textarea{min-height:90px;font-family:monospace;font-size:12px}
  <button id="go" style="width:100%;margin-top:10px">Sign in</button><p id="lerr" style="color:var(--bad)"></p>
 </div>
 <div id="app" style="display:none">
- <div class="tabs" id="tabs"><button data-t="stats" class="on">Stats</button><button data-t="wd">Withdrawals</button><button data-t="users">Users</button><button data-t="set">Settings</button><button id="out">Exit</button></div>
+ <div class="tabs" id="tabs"><button data-t="stats" class="on">Stats</button><button data-t="wd">Withdrawals</button><button data-t="users">Users</button><button data-t="tasks">Tasks</button><button data-t="set">Settings</button><button id="out">Exit</button></div>
  <div id="v"></div>
 </div>
 <script>
@@ -59,7 +59,7 @@ $("go").onclick=async()=>{KEY=$("key").value.trim();if(!KEY)return;$("lerr").tex
  try{await call("stats");try{sessionStorage.setItem("dk",KEY)}catch(e){}$("lerr").textContent="";$("key").value="";show()}catch(e){KEY="";$("lerr").textContent=e.message}};
 $("out").onclick=logout;
 $("tabs").onclick=e=>{const t=e.target.dataset&&e.target.dataset.t;if(t)tab(t)};
-function tab(t){document.querySelectorAll("#tabs button[data-t]").forEach(b=>b.classList.toggle("on",b.dataset.t===t));({stats,wd:()=>wd("pending"),users:()=>users(""),set:settings})[t]()}
+function tab(t){document.querySelectorAll("#tabs button[data-t]").forEach(b=>b.classList.toggle("on",b.dataset.t===t));({stats,wd:()=>wd("pending"),users:()=>users(""),tasks:tasksView,set:settings})[t]()}
 const err=e=>{$("v").innerHTML='<div class="card" style="color:var(--bad)">'+esc(e.message)+'</div>'};
 const load=()=>{$("v").innerHTML="<p>Loading…</p>"};
 
@@ -96,6 +96,15 @@ async function settings(){load();try{const d=await call("settings");
  $("v").innerHTML=`<h2>Settings</h2><p>Careful: these control all rewards. Keep the same format when you edit. Odds are [prize, weight] pairs; a bigger weight means it comes up more often.</p>`+d.map(s=>`<div class="card"><b>${esc(s.key)}</b><textarea id="s_${esc(s.key)}">${esc(JSON.stringify(s.value,null,1))}</textarea><button style="width:100%;margin-top:8px" onclick="saveS('${esc(s.key)}')">Save ${esc(s.key)}</button></div>`).join("")}catch(e){err(e)}}
 async function saveS(k){const v=document.getElementById("s_"+k).value;if(!confirm("Save new "+k+" settings? They apply to all users immediately."))return;
  try{await call("setSetting",{key:k,value:v});alert("Saved")}catch(e){alert("Not saved: "+e.message)}}
+
+async function tasksView(){load();try{const d=await call("tasks");
+ $("v").innerHTML=`<h2>Tasks</h2><p>Users see the active tasks in order (smallest number first). Changing a reward only affects people who have not done that task yet. To verify a Telegram channel, the bot must be an admin of it. YouTube and WhatsApp links can't be verified.</p>
+ <div class="card"><b>Add a new task</b>${tform({id:"",title:"",url:"",reward:300,check_channel:"",active:true,sort:d.length+1},"new")}</div>`+
+ d.map((t,i)=>`<div class="card"><b>${esc(t.title)}</b> ${t.active?"":'<span class="tag">hidden</span>'}${tform(t,i)}</div>`).join("")}catch(e){err(e)}}
+function tform(t,k){const p="f"+k+"_";return `<input id="${p}title" placeholder="Task name, e.g. Join our channel" value="${esc(t.title)}"><input id="${p}url" placeholder="Link, starting with https://" value="${esc(t.url)}"><div class="grid"><input id="${p}reward" type="number" placeholder="Reward" value="${esc(t.reward)}"><input id="${p}sort" type="number" placeholder="Order" value="${esc(t.sort)}"></div><input id="${p}ch" placeholder="Check Telegram channel (optional) @yourchannel" value="${esc(t.check_channel||"")}"><label style="display:block;margin-top:10px;font-size:14px"><input id="${p}act" type="checkbox" style="width:auto;margin-right:8px" ${t.active?"checked":""}>Show to users</label><div class="btns"><button onclick="saveT('${esc(t.id)}','${k}')">${t.id?"Save":"Add task"}</button>${t.id?`<button class="bad" onclick="delT('${esc(t.id)}')">Delete</button>`:""}</div>`}
+async function saveT(id,k){const p="f"+k+"_",g=x=>document.getElementById(p+x);
+ try{await call("saveTask",{id,title:g("title").value,url:g("url").value,reward:g("reward").value,sort:g("sort").value,check_channel:g("ch").value,active:g("act").checked});tasksView()}catch(e){alert(e.message)}}
+async function delT(id){if(!confirm("Delete this task? Users who already did it keep their DOGS."))return;try{await call("deleteTask",{id});tasksView()}catch(e){alert(e.message)}}
 show();
 </script>
 </body></html>
