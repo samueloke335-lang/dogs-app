@@ -95,7 +95,7 @@ async function ban(id,b){if(!confirm(b?"Ban this user? They will not be able to 
 async function settings(){load();try{const d=await call("settings");
  $("v").innerHTML=`<h2>Settings</h2><p>Careful: these control all rewards. Keep the same format when you edit. Odds are [prize, weight] pairs; a bigger weight means it comes up more often.</p>`+d.map(s=>`<div class="card"><b>${esc(s.key)}</b><textarea id="s_${esc(s.key)}">${esc(JSON.stringify(s.value,null,1))}</textarea><button style="width:100%;margin-top:8px" onclick="saveS('${esc(s.key)}')">Save ${esc(s.key)}</button></div>`).join("")}catch(e){err(e)}}
 async function saveS(k){const v=document.getElementById("s_"+k).value;if(!confirm("Save new "+k+" settings? They apply to all users immediately."))return;
- try{await call("setSetting",{key:k,value:v});alert("Saved")}catch(e){alert("Not saved: "+e.message)}}
+ try{await call("setSetting",{name:k,value:v});alert("Saved")}catch(e){alert("Not saved: "+e.message)}}
 
 async function tasksView(){load();try{const d=await call("tasks");
  $("v").innerHTML=`<h2>Tasks</h2><p>Users see the active tasks in order (smallest number first). Changing a reward only affects people who have not done that task yet. To verify a Telegram channel, the bot must be an admin of it. YouTube and WhatsApp links can't be verified.</p>
