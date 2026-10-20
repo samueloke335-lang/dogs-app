@@ -146,10 +146,7 @@ if(tg){try{tg.ready();tg.expand()}catch(e){}}
 const API="https://ytrvqpjdghvjcjwtscyv.supabase.co/functions/v1/dogs-api";
 // Display values only. The server decides every real reward, limit and fee (see the settings table).
 const CFG={bot:"https://t.me/DOGSAIRDROP11BOT",app:"", /* app: put your Mini App short name here only if you made it with /newapp */ ref:{open:330,tasks:70,withdraw:100},min:5000,max:7000,fee:0.15,perDay:2,claim:200,claimHours:4,
- wheel:[5,10,15,20,30,50],ci:[20,30,40,50,60,80,120],
- tasks:[{id:"t1",t:"Join our Telegram channel",r:300,u:"https://t.me/YOUR_CHANNEL"},
-        {id:"t2",t:"Subscribe on YouTube",r:300,u:"https://youtube.com/@YOUR_CHANNEL"},
-        {id:"t3",t:"Join our WhatsApp channel",r:300,u:"https://whatsapp.com/channel/YOUR_CHANNEL"}]};
+ wheel:[5,10,15,20,30,50],ci:[20,30,40,50,60,80,120]};
 const ERR={too_soon:"Not ready yet",already_done:"Already done",no_plays_left:"No plays left today",not_joined:"Join the channel first",
  below_min:"Minimum withdrawal is "+CFG.min.toLocaleString()+" DOGS",above_max:"Maximum withdrawal is "+CFG.max.toLocaleString()+" DOGS",
  insufficient:"Not enough DOGS",bad_wallet:"Enter a valid wallet address",bad_amount:"Enter a valid amount",pending_exists:"You already have a pending withdrawal",
@@ -177,7 +174,7 @@ function render(){
  $("claimBtn").disabled=wait>0||busy||!loaded;$("claimBtn").textContent=wait>0?"Come back later":"Claim "+CFG.claim+" DOGS";
  $("claimInfo").textContent=wait>0?"Next claim in "+Math.floor(wait/3600000)+"h "+Math.ceil(wait%3600000/60000)+"m":"Your claim is ready.";
  const dn=ST.tasks||[];
- $("taskList").innerHTML=CFG.tasks.map(k=>`<div class="row"><span>${k.t}<br><small style="color:#fff">+${k.r} DOGS</small></span>${dn.includes(k.id)?'<span class="tag ok">Done</span>':`<button style="width:auto;margin:0;padding:8px 14px" data-task="${k.id}">Start</button>`}</div>`).join("");
+ $("taskList").innerHTML=(ST.task_list||[]).map(k=>`<div class="row"><span>${esc(k.title)}<br><small style="color:#fff">+${k.reward} DOGS</small></span>${dn.includes(k.id)?'<span class="tag ok">Done</span>':`<button style="width:auto;margin:0;padding:8px 14px" data-task="${k.id}">Start</button>`}</div>`).join("");
  $("spinInfo").textContent=left("wheel")+" of "+CFG.perDay+" spins left today.";$("spinBtn").disabled=left("wheel")<=0||spinning;
  $("boneInfo").textContent=left("bones")+" of "+CFG.perDay+" rounds left today.";$("boneBtn").disabled=left("bones")<=0||playing;
  $("refTotal").textContent=fmt(CFG.ref.open+CFG.ref.tasks+CFG.ref.withdraw);
@@ -188,7 +185,7 @@ function render(){
  $("mn").textContent=fmt(CFG.min);$("mx").textContent=fmt(CFG.max);$("fe").textContent=CFG.fee*100+"%";calc();
  const wd=ST.withdrawals||[];
  $("hist").innerHTML=wd.length?wd.slice().reverse().map(h=>`<div class="row"><span>${fmt(h.amount)} DOGS<br><small style="color:var(--mute)">You get ${fmt(h.net)} · ${String(h.at).slice(0,10)}</small></span><span class="tag ${h.status==="paid"?"ok":""}">${h.status==="paid"?"Paid":h.status==="rejected"?"Rejected":"Pending"}</span></div>`).join(""):"<p>No withdrawals yet.</p>";
- $("stF").textContent=fr.length;$("stT").textContent=dn.length+"/"+CFG.tasks.length;$("stW").textContent=fmt(wd.filter(h=>h.status==="paid").reduce((s,h)=>s+h.amount,0));
+ $("stF").textContent=fr.length;$("stT").textContent=(ST.task_list||[]).filter(k=>dn.includes(k.id)).length+"/"+(ST.task_list||[]).length;$("stW").textContent=fmt(wd.filter(h=>h.status==="paid").reduce((s,h)=>s+h.amount,0));
  const n=ST.ci_streak||0;
  $("days").innerHTML=CFG.ci.map((v,i)=>`<span class="${i<n?"on":""}">${i<n?"✓":v}</span>`).join("");
  $("ciBtn").disabled=!!ST.ci_done_today||busy||!loaded;$("ciBtn").textContent=ST.ci_done_today?"Checked in today":"Check in · +"+CFG.ci[n>=7?0:n]+" DOGS";
@@ -201,7 +198,7 @@ async function act(btn,action,extra,msg){if(busy)return;busy=true;render();const
 $("claimBtn").onclick=()=>act($("claimBtn"),"claim",{},r=>"+"+r.reward+" DOGS claimed");
 $("ciBtn").onclick=()=>act($("ciBtn"),"checkin",{},r=>"Day "+r.day+" check-in: +"+r.reward+" DOGS");
 document.addEventListener("click",e=>{const id=e.target.dataset&&e.target.dataset.task;if(!id)return;
- const k=CFG.tasks.find(x=>x.id===id);if(tg&&tg.openLink){tg.openLink(k.u)}else{window.open(k.u,"_blank")}
+ const k=(ST.task_list||[]).find(x=>x.id===id);if(!k)return;if(tg&&tg.openLink){tg.openLink(k.url)}else{window.open(k.url,"_blank")}
  e.target.disabled=true;e.target.textContent="Checking…";
  setTimeout(async()=>{const j=await api("task",{task:id});if(bad(j))toast(errOf(j));else toast("+"+j.result.reward+" DOGS");render()},5000)});
 $("nav").onclick=e=>{const b=e.target.closest("b");if(!b)return;
