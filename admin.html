@@ -3,9 +3,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>DOGS Admin</title>
+<title>FROG FARM Admin</title>
 <style>
-:root{--line:rgba(255,255,255,.14);--panel:rgba(255,255,255,.06);--mute:#8e8e93;--glow:150,200,255;--ok:#3ecf8e;--bad:#ff5d5d}
+:root{--line:rgba(255,255,255,.14);--panel:rgba(255,255,255,.06);--mute:#8e8e93;--glow:90,220,130;--ok:#3ecf8e;--bad:#ff5d5d}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:#000;color:#fff;font-family:"Trebuchet MS",system-ui,sans-serif}
 body{padding:env(safe-area-inset-top) 12px calc(24px + env(safe-area-inset-bottom));max-width:640px;margin:auto}
@@ -30,17 +30,18 @@ textarea{min-height:90px;font-family:monospace;font-size:12px}
 .tag{font-size:12px;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.12)}
 .tag.paid{background:var(--ok);color:#000}.tag.rejected{background:var(--bad)}
 .w{word-break:break-all;font-family:monospace;font-size:12px;color:#cde;background:#0b0b0b;border-radius:8px;padding:6px;margin:6px 0}
+.field2{margin-top:8px}.field2 label,.lab{font-size:12px;color:var(--mute);display:block;margin-top:8px}.seven{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.seven input{padding:8px 2px;text-align:center}.odd{align-items:center}.odd input{flex:1;margin-top:0}
 .btns{display:flex;gap:8px;margin-top:8px}.btns button{flex:1}
 #login{margin-top:30vh;text-align:center}
 </style></head>
 <body>
 <div id="login" style="display:none">
- <h2>DOGS Admin</h2><p>Enter your admin key.</p>
+ <h2>FROG FARM Admin</h2><p>Enter your admin key.</p>
  <input id="key" type="password" placeholder="Admin key" autocomplete="off">
  <button id="go" style="width:100%;margin-top:10px">Sign in</button><p id="lerr" style="color:var(--bad)"></p>
 </div>
 <div id="app" style="display:none">
- <div class="tabs" id="tabs"><button data-t="stats" class="on">Stats</button><button data-t="wd">Withdrawals</button><button data-t="users">Users</button><button data-t="tasks">Tasks</button><button data-t="set">Settings</button><button id="out">Exit</button></div>
+ <div class="tabs" id="tabs"><button data-t="stats" class="on">Stats</button><button data-t="wd">Withdrawals</button><button data-t="users">Users</button><button data-t="refs">Referrals</button><button data-t="tasks">Tasks</button><button data-t="bc">Broadcast</button><button data-t="logs">Logs</button><button data-t="set">Settings</button><button id="out">Exit</button></div>
  <div id="v"></div>
 </div>
 <script>
@@ -59,43 +60,89 @@ $("go").onclick=async()=>{KEY=$("key").value.trim();if(!KEY)return;$("lerr").tex
  try{await call("stats");try{sessionStorage.setItem("dk",KEY)}catch(e){}$("lerr").textContent="";$("key").value="";show()}catch(e){KEY="";$("lerr").textContent=e.message}};
 $("out").onclick=logout;
 $("tabs").onclick=e=>{const t=e.target.dataset&&e.target.dataset.t;if(t)tab(t)};
-function tab(t){document.querySelectorAll("#tabs button[data-t]").forEach(b=>b.classList.toggle("on",b.dataset.t===t));({stats,wd:()=>wd("pending"),users:()=>users(""),tasks:tasksView,set:settings})[t]()}
+function tab(t){document.querySelectorAll("#tabs button[data-t]").forEach(b=>b.classList.toggle("on",b.dataset.t===t));({stats,wd:()=>wd("pending"),users:()=>users(""),tasks:tasksView,bc:bcView,refs:refsView,logs:()=>logsView("tx"),set:settings})[t]()}
 const err=e=>{$("v").innerHTML='<div class="card" style="color:var(--bad)">'+esc(e.message)+'</div>'};
 const load=()=>{$("v").innerHTML="<p>Loading…</p>"};
 
 async function stats(){load();try{const s=await call("stats");
  $("v").innerHTML=`<h2>Overview</h2><div class="grid">
  <div class="stat"><b>${fmt(s.users)}</b><small>Users</small></div><div class="stat"><b>${fmt(s.new_today)}</b><small>New today</small></div>
- <div class="stat"><b>${fmt(s.pending_count)}</b><small>Pending withdrawals</small></div><div class="stat"><b>${fmt(s.pending_sum)}</b><small>Pending DOGS to pay</small></div>
- <div class="stat"><b>${fmt(s.paid_count)}</b><small>Paid withdrawals</small></div><div class="stat"><b>${fmt(s.paid_sum)}</b><small>DOGS paid out</small></div>
- <div class="stat"><b>${fmt(s.total_balance)}</b><small>DOGS held by users</small></div><div class="stat"><b>${fmt(s.banned)}</b><small>Banned</small></div></div>`}catch(e){err(e)}}
+ <div class="stat"><b>${fmt(s.pending_count)}</b><small>Pending withdrawals</small></div><div class="stat"><b>${(+s.pending_sum).toFixed(4)}</b><small>Pending TON to pay</small></div>
+ <div class="stat"><b>${fmt(s.paid_count)}</b><small>Paid withdrawals</small></div><div class="stat"><b>${(+s.paid_sum).toFixed(4)}</b><small>TON paid out</small></div>
+ <div class="stat"><b>${fmt(s.total_balance)}</b><small>FROGS held by users</small></div><div class="stat"><b>${(+s.ton_held).toFixed(4)}</b><small>TON held by users</small></div><div class="stat"><b>${fmt(s.banned)}</b><small>Banned</small></div></div>`}catch(e){err(e)}}
 
 async function wd(st){load();try{const d=await call("withdrawals",{status:st});
  const bar=["pending","paid","rejected"].map(x=>`<button class="${x===st?"":"alt"}" onclick="wd('${x}')">${x[0].toUpperCase()+x.slice(1)}</button>`).join("");
  $("v").innerHTML=`<h2>Withdrawals</h2><div class="btns">${bar}</div>`+(d.length?d.map(w=>`<div class="card">
-  <div class="row"><b>${fmt(w.amount)} DOGS</b><span class="tag ${w.status}">${w.status}</span></div>
+  <div class="row"><b>${(w.amount/1e9).toFixed(4)} TON</b><span class="tag ${w.status}">${w.status}</span></div>
   <small>${esc(w.users&&w.users.first_name||"User")} · ID ${w.tg_id} · ${esc(String(w.created_at).slice(0,16).replace("T"," "))}</small>
-  <div class="row"><span>Send to user (after 15% fee)</span><b>${fmt(w.net)}</b></div>
+  <div class="row"><span>Send to user (after fee)</span><b>${(w.net/1e9).toFixed(4)} TON</b></div>
   <div class="w" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.textContent);this.style.outline='1px solid #3ecf8e'">${esc(w.wallet)}</div><small>Tap the address to copy</small>
   ${w.status==="pending"?`<div class="btns"><button class="ok" onclick="setW('${w.id}','paid')">Mark paid</button><button class="bad" onclick="setW('${w.id}','rejected')">Reject</button></div>`:""}</div>`).join(""):"<p>Nothing here.</p>")}catch(e){err(e)}}
 async function setW(id,s){
- const msg=s==="paid"?"Mark as PAID? Do this only after you have sent the DOGS. It also releases the inviter's bonus.":"REJECT and refund the full amount to the user?";
+ const msg=s==="paid"?"Mark as PAID? Do this only after you have sent the FROGS. It also releases the inviter's bonus.":"REJECT and refund the full amount to the user?";
  if(!confirm(msg))return;
  try{const r=await call("setWithdrawal",{id,status:s});if(r&&r.error)throw new Error(r.error);wd("pending")}catch(e){alert("Failed: "+e.message)}}
 
 async function users(q){$("v").innerHTML=`<h2>Users</h2><input id="uq" placeholder="Search name or Telegram ID" value="${esc(q)}"><button style="width:100%;margin-top:8px" onclick="users(document.getElementById('uq').value)">Search</button><div id="ul"><p>Loading…</p></div>`;
- try{const d=await call("users",{q});$("ul").innerHTML=d.length?d.map(u=>`<div class="card" onclick="user(${u.tg_id})"><div class="row"><b>${esc(u.first_name||"User")}</b><span>${fmt(u.balance)} DOGS</span></div><small>ID ${u.tg_id}${u.banned?" · BANNED":""}${u.has_withdrawn?" · has withdrawn":""}</small></div>`).join(""):"<p>No users found.</p>"}catch(e){$("ul").innerHTML=esc(e.message)}}
+ try{const d=await call("users",{q});$("ul").innerHTML=d.length?d.map(u=>`<div class="card" onclick="user(${u.tg_id})"><div class="row"><b>${esc(u.first_name||"User")}</b><span>${fmt(u.balance)} FROGS</span></div><small>ID ${u.tg_id}${u.banned?" · BANNED":""}${u.ref_blocked?" · referral blocked":""}${u.has_withdrawn?" · has withdrawn":""}</small></div>`).join(""):"<p>No users found.</p>"}catch(e){$("ul").innerHTML=esc(e.message)}}
 async function user(id){load();try{const d=await call("user",{id});const u=d.user;if(!u)return err(new Error("User not found"));
  $("v").innerHTML=`<button class="alt" onclick="users('')">← Back</button><h2>${esc(u.first_name||"User")}</h2><p>ID ${u.tg_id} · joined ${esc(String(u.created_at).slice(0,10))}</p>
- <div class="grid"><div class="stat"><b>${fmt(u.balance)}</b><small>Balance</small></div><div class="stat"><b>${fmt(d.friends)}</b><small>Friends invited</small></div></div>
- <div class="btns"><button class="${u.banned?"ok":"bad"}" onclick="ban(${u.tg_id},${!u.banned})">${u.banned?"Unban user":"Ban user"}</button></div>
+ <div class="grid"><div class="stat"><b>${fmt(u.balance)}</b><small>FROGS</small></div><div class="stat"><b>${((u.ton_nano||0)/1e9).toFixed(4)}</b><small>TON</small></div><div class="stat"><b>${fmt(d.friends)}</b><small>Friends</small></div></div>
+ <div class="btns"><button class="${u.banned?"ok":"bad"}" onclick="ban(${u.tg_id},${!u.banned})">${u.banned?"Unban user":"Ban user"}</button><button class="alt" onclick="refBlock(${u.tg_id},${!u.ref_blocked})">${u.ref_blocked?"Allow referral bonus":"Block referral bonus"}</button></div>
+ <p>Opened with link code: <b>${esc(u.last_start||"none")}</b> · Invited by: <b>${u.referrer_id||"nobody"}</b></p>
+ <div class="card"><b>Add or remove FROGS</b><input id="adjAmt" type="number" inputmode="numeric" placeholder="Amount"><input id="adjWhy" placeholder="Reason (optional)"><div class="btns"><button class="ok" onclick="adj(${u.tg_id},1)">Add</button><button class="bad" onclick="adj(${u.tg_id},-1)">Remove</button></div></div>
+ <div class="card"><b>Add or remove TON</b><input id="tonAmt" type="number" step="any" placeholder="Amount in TON"><input id="tonWhy" placeholder="Reason (optional)"><div class="btns"><button class="ok" onclick="adjT(${u.tg_id},1)">Add</button><button class="bad" onclick="adjT(${u.tg_id},-1)">Remove</button></div></div>
+ <div class="card"><b>Friends invited (${d.friends})</b>${d.friend_list&&d.friend_list.length?d.friend_list.map(f=>`<div class="row"><span>${esc(f.first_name||"User")}</span><a href="#" style="color:#fff" onclick="user(${f.tg_id});return false">${f.tg_id}</a></div>`).join(""):"<p>None</p>"}</div>
  <div class="card"><b>Recent activity</b>${d.ledger.length?d.ledger.map(l=>`<div class="row"><span>${esc(l.reason)}<br><small>${esc(String(l.created_at).slice(0,16).replace("T"," "))}</small></span><b style="color:${l.amount<0?"var(--bad)":"var(--ok)"}">${l.amount>0?"+":""}${fmt(l.amount)}</b></div>`).join(""):"<p>No activity.</p>"}</div>`}catch(e){err(e)}}
 async function ban(id,b){if(!confirm(b?"Ban this user? They will not be able to earn or withdraw.":"Unban this user?"))return;try{await call("ban",{id,banned:b});user(id)}catch(e){alert(e.message)}}
 
-async function settings(){load();try{const d=await call("settings");
- $("v").innerHTML=`<h2>Settings</h2><p>Careful: these control all rewards. Keep the same format when you edit. Odds are [prize, weight] pairs; a bigger weight means it comes up more often.</p>`+d.map(s=>`<div class="card"><b>${esc(s.key)}</b><textarea id="s_${esc(s.key)}">${esc(JSON.stringify(s.value,null,1))}</textarea><button style="width:100%;margin-top:8px" onclick="saveS('${esc(s.key)}')">Save ${esc(s.key)}</button></div>`).join("")}catch(e){err(e)}}
-async function saveS(k){const v=document.getElementById("s_"+k).value;if(!confirm("Save new "+k+" settings? They apply to all users immediately."))return;
- try{await call("setSetting",{name:k,value:v});alert("Saved")}catch(e){alert("Not saved: "+e.message)}}
+
+let SET={};
+const GN={wheel:"Lucky wheel",bones:"Fly catch",memory:"Memory match",cups:"Find the fly",dig:"Treasure dig",tap:"Tap rush",react:"Quick tongue"};
+const gv=id=>+document.getElementById(id).value;
+const numF=(id,label,val)=>`<div class="field2"><label>${label}</label><input id="${id}" type="number" step="any" value="${esc(val)}"></div>`;
+async function settings(){load();try{const [d,ch]=await Promise.all([call("settings"),call("getChannel")]);SET={};d.forEach(s=>SET[s.key]=s.value);
+ const c=SET.claim,w=SET.withdraw,s=SET.swap,r=SET.referral;
+ $("v").innerHTML=`<h2>Settings</h2><p>Changes apply to every user straight away.</p>
+ <div class="card"><b>📡 Payment channel</b><p>Withdrawal requests and approvals are posted here. Add your bot as an admin of the channel first.</p><input id="chan" placeholder="@yourchannel" value="${esc(ch.chat_id)}"><div class="btns"><button onclick="saveChan()">Save</button><button class="alt" onclick="testChan()">Send test</button></div></div>
+ <div class="card"><b>🤖 Bot</b><p>Used to build every invite link.</p><input id="botName" placeholder="Bot username, no @" value="${esc(SET.app.bot)}"><button style="width:100%;margin-top:8px" onclick="saveApp()">Save bot username</button></div>
+ <div class="card"><b>🎁 Claim, check-in and plays</b><div class="grid">${numF("cl_amt","Claim amount (FROGS)",c.amount)}${numF("cl_hrs","Hours between claims",c.hours)}</div>${numF("gpd","Plays per game per day",SET.games_per_day)}<label class="lab">Check-in rewards, day 1 to 7</label><div class="seven">${SET.checkin.map((v,i)=>`<input id="ci${i}" type="number" value="${esc(v)}">`).join("")}</div><button style="width:100%;margin-top:10px" onclick="saveRewards()">Save</button></div>
+ <div class="card"><b>👥 Referral rewards per friend</b>${numF("rf_o","Friend opens the app",r.open)}${numF("rf_t","Friend finishes every task",r.tasks)}${numF("rf_w","Friend's first withdrawal is paid",r.withdraw)}<button style="width:100%;margin-top:10px" onclick="saveRef()">Save</button></div>
+ <div class="card"><b>🔄 Swap FROGS to TON</b><div class="grid">${numF("sw_f","FROGS",s.frogs)}${numF("sw_t","equals TON",s.ton)}</div><div class="grid">${numF("sw_fee","Swap fee %",Math.round(s.fee*10000)/100)}${numF("sw_min","Minimum swap (FROGS)",s.min_frogs)}</div><button style="width:100%;margin-top:10px" onclick="saveSwap()">Save</button></div>
+ <div class="card"><b>💎 TON withdrawals</b><div class="grid">${numF("wd_min","Minimum TON",w.min)}${numF("wd_max","Maximum TON",w.max)}</div>${numF("wd_fee","Withdrawal fee %",Math.round(w.fee*10000)/100)}<button style="width:100%;margin-top:10px" onclick="saveWd()">Save</button></div>
+ <div class="card"><b>🎲 Game prizes and chances</b><p>Each row is a prize and its weight. A bigger weight comes up more often. A prize of 0 means no win.</p>${Object.keys(SET.odds).map(oddsCard).join("")}</div>`}catch(e){err(e)}}
+function oddsCard(g){const rows=SET.odds[g],tot=rows.reduce((s,e)=>s+e[1],0);
+ return `<div style="margin-top:14px"><b>${esc(GN[g]||g)}</b><div id="od_${g}">${rows.map(e=>oddRow(e,tot)).join("")}</div><div class="btns"><button class="alt" onclick="addOdd('${g}')">+ Add prize</button><button onclick="saveOdds('${g}')">Save</button></div></div>`}
+function oddRow(e,tot){return `<div class="row odd"><input type="number" value="${esc(e[0])}" placeholder="Prize"><input type="number" value="${esc(e[1])}" placeholder="Weight"><small style="min-width:40px">${tot?Math.round(e[1]/tot*1000)/10:0}%</small><button class="alt" style="padding:6px 10px;flex:0" onclick="this.parentNode.remove()">✕</button></div>`}
+function addOdd(g){document.getElementById("od_"+g).insertAdjacentHTML("beforeend",oddRow([0,1],0))}
+async function setMany(list,label){if(!confirm("Save "+label+"? It applies to all users immediately."))return;
+ try{for(const [name,val] of list)await call("setSetting",{name,value:JSON.stringify(val)});alert("Saved");settings()}catch(e){alert("Not saved: "+e.message)}}
+function saveOdds(g){const rows=[...document.querySelectorAll("#od_"+g+" .odd")].map(r=>{const i=r.querySelectorAll("input");return [+i[0].value,+i[1].value]});const all=JSON.parse(JSON.stringify(SET.odds));all[g]=rows;setMany([["odds",all]],GN[g])}
+function saveRewards(){setMany([["claim",{amount:gv("cl_amt"),hours:gv("cl_hrs")}],["games_per_day",gv("gpd")],["checkin",[0,1,2,3,4,5,6].map(i=>gv("ci"+i))]],"these rewards")}
+function saveRef(){setMany([["referral",{open:gv("rf_o"),tasks:gv("rf_t"),withdraw:gv("rf_w")}]],"the referral rewards")}
+function saveSwap(){setMany([["swap",{frogs:gv("sw_f"),ton:gv("sw_t"),fee:gv("sw_fee")/100,min_frogs:gv("sw_min")}]],"the swap rules")}
+function saveWd(){setMany([["withdraw",{min:gv("wd_min"),max:gv("wd_max"),fee:gv("wd_fee")/100}]],"the withdrawal rules")}
+function saveApp(){setMany([["app",{bot:document.getElementById("botName").value.trim().replace(/^@/,"")}]],"the bot username")}
+async function saveChan(){try{await call("setChannel",{chat_id:document.getElementById("chan").value.trim()});alert("Channel saved")}catch(e){alert(e.message)}}
+async function testChan(){try{const r=await call("testChannel");alert(r.ok?"Test message sent. Check your channel.":"Not sent: "+(r.description||"unknown error")+". Make sure the bot is an admin of the channel.")}catch(e){alert(e.message)}}
+async function adjT(id,sign){const n=+document.getElementById("tonAmt").value;if(!n||n<=0)return alert("Enter a positive TON amount");
+ if(!confirm((sign>0?"Add ":"Remove ")+n+" TON "+(sign>0?"to":"from")+" this user?"))return;
+ try{await call("adjustTon",{id,amount:sign*n,reason:document.getElementById("tonWhy").value});user(id)}catch(e){alert(e.message)}}
+
+async function bcView(){load();try{const list=await call("broadcasts");
+ $("v").innerHTML=`<h2>Broadcast</h2><p>Send a message from your bot to every user. People who blocked the bot are skipped. Keep this page open until it finishes.</p>
+ <div class="card"><textarea id="bcText" placeholder="Write your message (plain text, up to 3500 characters)"></textarea>
+ <input id="bcBtnT" placeholder="Button name (optional), e.g. Open FROG FARM"><input id="bcBtnU" placeholder="Button link (optional), starts with https://">
+ <input id="bcTo" inputmode="numeric" placeholder="Your Telegram ID (for a test)"><div class="btns"><button class="alt" onclick="bcTest()">Send test to me</button><button onclick="bcSend()">Send to everyone</button></div><div id="bcProg"></div></div>
+ <h2>Recent broadcasts</h2>`+(list.length?list.map(x=>`<div class="card"><small>${esc(String(x.created_at).slice(0,16).replace("T"," "))} · ${esc(x.status)}</small><p style="color:#fff">${esc(x.text.slice(0,120))}</p><div class="row"><span>Delivered ${x.sent} of ${x.total}</span><span>${x.failed} failed</span></div>${x.status==="running"?`<button style="width:100%" onclick="bcRun(${x.id})">Continue sending</button>`:""}</div>`).join(""):"<p>None yet.</p>")}catch(e){err(e)}}
+const bcFields=()=>({text:document.getElementById("bcText").value,btn_text:document.getElementById("bcBtnT").value,btn_url:document.getElementById("bcBtnU").value});
+async function bcTest(){try{const r=await call("broadcastTest",Object.assign(bcFields(),{to:document.getElementById("bcTo").value}));alert(r.ok?"Test sent. Check your Telegram.":"Not sent: "+(r.description||"unknown error")+". Open your bot and press Start first.")}catch(e){alert(e.message)}}
+async function bcSend(){const f=bcFields();if(!f.text.trim())return alert("Write a message first");if(!confirm("Send this message to ALL users now? This cannot be undone."))return;
+ try{const b=await call("broadcastStart",f);bcRun(b.id)}catch(e){alert(e.message)}}
+async function bcRun(id){const el=document.getElementById("bcProg");let st;
+ try{do{st=await call("broadcastStep",{id});if(el)el.innerHTML=`<p style="color:#fff">Sending… ${st.sent+st.failed} of ${st.total} (${st.failed} failed)</p>`}while(st.status==="running");
+ alert("Done. Delivered "+st.sent+" of "+st.total+".");bcView()}catch(e){alert("Stopped: "+e.message+". Open Broadcast and tap Continue sending.")}}
 
 async function tasksView(){load();try{const d=await call("tasks");
  $("v").innerHTML=`<h2>Tasks</h2><p>Users see the active tasks in order (smallest number first). Changing a reward only affects people who have not done that task yet. To verify a Telegram channel, the bot must be an admin of it. YouTube and WhatsApp links can't be verified.</p>
@@ -104,7 +151,20 @@ async function tasksView(){load();try{const d=await call("tasks");
 function tform(t,k){const p="f"+k+"_";return `<input id="${p}title" placeholder="Task name, e.g. Join our channel" value="${esc(t.title)}"><input id="${p}url" placeholder="Link, starting with https://" value="${esc(t.url)}"><div class="grid"><input id="${p}reward" type="number" placeholder="Reward" value="${esc(t.reward)}"><input id="${p}sort" type="number" placeholder="Order" value="${esc(t.sort)}"></div><input id="${p}ch" placeholder="Check Telegram channel (optional) @yourchannel" value="${esc(t.check_channel||"")}"><label style="display:block;margin-top:10px;font-size:14px"><input id="${p}act" type="checkbox" style="width:auto;margin-right:8px" ${t.active?"checked":""}>Show to users</label><div class="btns"><button onclick="saveT('${esc(t.id)}','${k}')">${t.id?"Save":"Add task"}</button>${t.id?`<button class="bad" onclick="delT('${esc(t.id)}')">Delete</button>`:""}</div>`}
 async function saveT(id,k){const p="f"+k+"_",g=x=>document.getElementById(p+x);
  try{await call("saveTask",{id,title:g("title").value,url:g("url").value,reward:g("reward").value,sort:g("sort").value,check_channel:g("ch").value,active:g("act").checked});tasksView()}catch(e){alert(e.message)}}
-async function delT(id){if(!confirm("Delete this task? Users who already did it keep their DOGS."))return;try{await call("deleteTask",{id});tasksView()}catch(e){alert(e.message)}}
+async function delT(id){if(!confirm("Delete this task? Users who already did it keep their FROGS."))return;try{await call("deleteTask",{id});tasksView()}catch(e){alert(e.message)}}
+
+async function adj(id,sign){const n=Math.floor(+document.getElementById("adjAmt").value);if(!n||n<=0)return alert("Enter a positive amount");
+ if(!confirm((sign>0?"Add ":"Remove ")+fmt(n)+" FROGS "+(sign>0?"to":"from")+" this user?"))return;
+ try{await call("adjust",{id,amount:sign*n,reason:document.getElementById("adjWhy").value});user(id)}catch(e){alert(e.message)}}
+
+async function refBlock(id,b){if(!confirm(b?"Stop this user from earning referral bonuses?":"Allow this user to earn referral bonuses again?"))return;try{await call("refBlock",{id,blocked:b});user(id)}catch(e){alert(e.message)}}
+async function refsView(){load();try{const [d,dup]=await Promise.all([call("referrals"),call("duplicates")]);
+ const flag=r=>{const f=[];if(r.friends>=3&&r.idle/r.friends>=0.7)f.push("most friends are inactive");if(r.burst>=8)f.push(r.burst+" joined in one hour");if(r.new_24h>=10)f.push(r.new_24h+" new in 24h");return f};
+ $("v").innerHTML=`<h2>Referrals</h2><p>Warnings are hints, not proof. Tap a person to review and restrict them.</p>`+(d.length?d.map(r=>{const f=flag(r);return `<div class="card" onclick="user(${r.tg_id})"><div class="row"><b>${esc(r.name||"User")}</b><span>${r.friends} friends</span></div><small>ID ${r.tg_id} · inactive ${r.idle} · tasks done ${r.tasks_done} · withdrew ${r.withdrew} · earned ${fmt(r.earned)}${r.blocked?" · REFERRALS BLOCKED":""}${r.banned?" · BANNED":""}</small>${f.length?`<p style="color:var(--bad)">⚠ ${esc(f.join(" · "))}</p>`:""}</div>`}).join(""):"<p>No referrals yet.</p>")+
+ `<h2>Shared wallets</h2><p>Wallets used by more than one account.</p>`+(dup.length?dup.map(x=>`<div class="card"><div class="w">${esc(x.wallet)}</div><small>${x.accounts} accounts: ${x.ids.map(i=>`<a href="#" style="color:#fff" onclick="user(${i});return false">${i}</a>`).join(", ")}</small></div>`).join(""):"<p>None found.</p>")}catch(e){err(e)}}
+async function logsView(m){load();try{const d=await call(m==="tx"?"ledger":"logs");
+ const bar=`<div class="btns"><button class="${m==="tx"?"":"alt"}" onclick="logsView('tx')">Transactions</button><button class="${m==="admin"?"":"alt"}" onclick="logsView('admin')">Admin actions</button></div>`;
+ $("v").innerHTML=`<h2>Logs</h2>${bar}`+(d.length?d.map(l=>m==="tx"?`<div class="row" onclick="user(${l.tg_id})"><span>${esc(l.users&&l.users.first_name||"User")} <small>· ${l.tg_id}</small><br><small>${esc(l.reason)} · ${esc(String(l.created_at).slice(0,16).replace("T"," "))}</small></span><b style="color:${l.amount<0?"var(--bad)":"var(--ok)"}">${l.amount>0?"+":""}${fmt(l.amount)}</b></div>`:`<div class="row"><span><b>${esc(l.action)}</b> <small>· ${esc(l.target||"")}</small><br><small>${esc(l.detail||"")} · ${esc(String(l.at).slice(0,16).replace("T"," "))}</small></span></div>`).join(""):"<p>Nothing yet.</p>")}catch(e){err(e)}}
 show();
 </script>
 </body></html>
