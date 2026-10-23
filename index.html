@@ -116,6 +116,7 @@ nav b.on em{text-shadow:0 0 10px rgba(var(--glow),.8)}
   <div class="actions"><button id="claimBtn" class="btn primary glow">Claim</button><button class="btn secondary" data-go="tasks">Earn FROGS ↗</button></div>
   <p id="claimInfo" style="margin:10px 0 0"></p></div>
  <div class="stats"><div class="stat"><div class="ico">👥</div><strong id="stF">0</strong><small>Friends</small></div><div class="stat"><div class="ico">🎯</div><strong id="stT">0/3</strong><small>Tasks</small></div><div class="stat"><div class="ico">💎</div><strong id="stW">0</strong><small>TON balance</small></div></div>
+ <div class="card" id="dmcard" style="display:none"><div class="irow"><div class="iconbox">🔔</div><div class="grow"><h4>Allow bot messages</h4><p>Get reward alerts, new tasks and payment updates.</p></div><button class="smallbtn" id="dmBtn">Allow</button></div></div>
  <div class="card adcard"><div class="irow"><div class="iconbox">📺</div><div class="grow"><h4>Watch an ad, earn FROGS</h4><p class="adInfo">+10 FROGS</p></div><button class="smallbtn adBtn">Watch</button></div></div>
  <div class="section-head"><h3>Daily farm check-in</h3><span class="reward">7-day streak</span></div>
  <div class="card"><div class="irow"><div class="iconbox">🌞</div><div class="grow"><h4>Check in every day</h4><p>Keep your streak to earn more each day.</p></div></div><div class="days" id="days"></div><button id="ciBtn" class="full glow">Check in</button></div>
@@ -193,7 +194,9 @@ function showJoin(list){let g=$("joingate");
 function hideJoin(){const g=$("joingate");if(g)g.style.display="none"}
 document.addEventListener("click",e=>{const u=e.target.dataset&&e.target.dataset.open;if(!u)return;
  if(tg&&tg.openTelegramLink&&/^https:\/\/t\.me\//.test(u))tg.openTelegramLink(u);else if(tg&&tg.openLink)tg.openLink(u);else window.open(u,"_blank")});
-function askDM(){try{if(tg&&tg.requestWriteAccess&&U&&U.allows_write_to_pm===false&&!sessionStorage.getItem("dm")){sessionStorage.setItem("dm","1");setTimeout(()=>{try{tg.requestWriteAccess()}catch(e){}},1800)}}catch(e){}}
+function dmUI(){const c=$("dmcard");if(!c)return;c.style.display=(tg&&tg.initData&&tg.requestWriteAccess&&U&&U.allows_write_to_pm!==true&&!window.__dmOk)?"":"none"}
+$("dmBtn").onclick=()=>{try{tg.requestWriteAccess(ok=>{if(ok){window.__dmOk=true;toast("Messages allowed ✅");dmUI()}else toast("No problem. You can allow it later.")})}catch(e){}};
+function askDM(){try{if(tg&&tg.requestWriteAccess&&U&&U.allows_write_to_pm!==true&&!sessionStorage.getItem("dm")){sessionStorage.setItem("dm","1");setTimeout(()=>{try{tg.requestWriteAccess()}catch(e){}},1800)}}catch(e){}}
 function release(){if(PEND){ST=PEND;PEND=null}render()}
 const CC=()=>(ST.cfg||{});
 const PD=()=>CC().games_per_day||CFG.perDay;
@@ -236,7 +239,7 @@ function render(){
  {const ap=(ST.cfg&&ST.cfg.app)||{};$("refLink").value="https://t.me/"+(ap.bot||BOT_USERNAME)+(ap.short?"/"+ap.short:"")+"?startapp="+uid}
  const fr=ST.friends||[];
  $("refList").innerHTML=fr.length?fr.map(r=>`<div class="row"><span>${esc(r.name||"Friend")}</span><span class="tag ${r.withdrawn?'ok':''}">${r.withdrawn?"Withdrawn":r.tasks?"Tasks done":"Opened"}</span></div>`).join(""):"<p>No friends yet. Share your link to start earning.</p>";
- buildWheel();adUI();cashUI();
+ buildWheel();dmUI();adUI();cashUI();
  const wd=ST.withdrawals||[];
  $("hist").innerHTML=wd.length?wd.slice().reverse().map(h=>`<div class="row"><span>${t4(h.amount)} TON<br><small style="color:var(--mute)">You get ${t4(h.net)} · ${String(h.at).slice(0,10)}</small></span><span class="tag ${h.status==="paid"?"ok":""}">${h.status==="paid"?"Paid":h.status==="rejected"?"Rejected":"Pending"}</span></div>`).join(""):"<p>No withdrawals yet.</p>";
  $("stF").textContent=fr.length;$("stT").textContent=(ST.task_list||[]).filter(k=>dn.includes(k.id)).length+"/"+(ST.task_list||[]).length;$("stW").textContent=t4(ST.ton||0);
