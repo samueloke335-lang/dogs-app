@@ -123,6 +123,7 @@ nav b.on em{text-shadow:0 0 10px rgba(var(--glow),.8)}
  <div class="section-head"><h3>Quick activities</h3><button data-go="games">See all</button></div>
  <div class="card" data-go="games"><div class="irow"><div class="iconbox">🎡</div><div class="grow"><h4>Lucky wheel</h4><p>Spin twice a day for a prize.</p></div><button class="smallbtn">Play</button></div></div>
  <div class="card" data-go="games"><div class="irow"><div class="iconbox">🪰</div><div class="grow"><h4>Fly catch</h4><p>Catch flies and win a prize.</p></div><button class="smallbtn">Play</button></div></div>
+ <div class="card" data-go="lb"><div class="irow"><div class="iconbox">🏆</div><div class="grow"><h4>Leaderboard</h4><p>See the top earners and inviters.</p></div><button class="smallbtn">View</button></div></div>
  <div class="card" data-go="invite"><div class="irow"><div class="iconbox">🎁</div><div class="grow"><h4>Invite friends</h4><p>Earn for every friend who joins.</p></div><button class="smallbtn">Invite</button></div></div>
 </section>
 
@@ -136,6 +137,10 @@ nav b.on em{text-shadow:0 0 10px rgba(var(--glow),.8)}
  <div class="card"><h4>🎡 Lucky wheel</h4><p id="spinInfo"></p><div id="pin">▼</div><div id="wheel"></div><button id="spinBtn" class="full glow">Spin</button></div>
  <div class="card"><h4>🪰 Fly catch</h4><p>Tap the flies for 15 seconds, then see your prize (up to <span id="boneMax">20</span> FROGS).</p><p id="boneInfo"></p><div id="grid"></div><button id="boneBtn" class="full">Start</button></div>
 </section>
+
+<section id="lb"><div class="section-head"><h3>🏆 Leaderboard</h3><button data-go="home">← Back</button></div>
+ <div class="actions" style="margin:0 0 10px"><button class="btn primary" id="lbT1">Top earners</button><button class="btn secondary" id="lbT2">Top inviters</button></div>
+ <div class="card" id="lbMe"></div><div class="card" id="lbList"><p>Loading…</p></div></section>
 
 <section id="invite"><div class="section-head"><h3>👥 Invite friends</h3><span class="pill"><span id="refTotal"></span> FROGS / friend</span></div>
  <div class="card"><h4>Paid in 3 steps</h4>
@@ -172,7 +177,7 @@ const API="https://ytrvqpjdghvjcjwtscyv.supabase.co/functions/v1/dogs-api";
 const BOT_USERNAME="FROGFARM01BOT"; // <<< CHANGE THIS to your bot username (without @)
 const CFG={bot:"https://t.me/"+BOT_USERNAME,app:"", /* app: put your Mini App short name here only if you made it with /newapp */ ref:{open:330,tasks:70,withdraw:100},min:5000,max:7000,fee:0.15,perDay:2,claim:200,claimHours:4,
  wheel:[5,10,15,20,30,50],ci:[20,30,40,50,60,80,120]};
-const ERR={too_soon:"Not ready yet",already_done:"Already done",must_join:"Join our channel first",ads_disabled:"Ads are paused right now",ad_cap:"Daily ad limit reached. Come back tomorrow.",ad_cooldown:"Wait a moment before the next ad",ad_too_fast:"Please watch the whole ad to earn",ad_unverified:"The ad could not be confirmed. Try again.",ad_expired:"That ad expired. Try again.",bad_token:"That ad could not be counted. Try again.",bad_code:"That invite code is not valid",wallet_used:"This wallet is already used by another account",too_late:"Too late. Codes only work before you earn FROGS",no_plays_left:"No plays left today",not_joined:"Join the channel first",
+const ERR={too_soon:"Not ready yet",already_done:"Already done",must_join:"Join our channel first",device_limit:"One account per device. Another account on this phone is already using the app.",ads_disabled:"Ads are paused right now",ad_cap:"Daily ad limit reached. Come back tomorrow.",ad_cooldown:"Wait a moment before the next ad",ad_too_fast:"Please watch the whole ad to earn",ad_unverified:"The ad could not be confirmed. Try again.",ad_expired:"That ad expired. Try again.",bad_token:"That ad could not be counted. Try again.",bad_code:"That invite code is not valid",wallet_used:"This wallet is already used by another account",too_late:"Too late. Codes only work before you earn FROGS",no_plays_left:"No plays left today",not_joined:"Join the channel first",
  below_min:"Below the minimum withdrawal",above_max:"Above the maximum withdrawal",below_min_swap:"Below the minimum swap",insufficient_ton:"Not enough TON. Swap some FROGS first.",
  insufficient:"Not enough FROGS",bad_wallet:"Enter a valid TON wallet address (starts with UQ or EQ)",bad_amount:"Enter a valid amount",pending_exists:"You already have a pending withdrawal",
  unauthorized:"Open this app from Telegram",network:"Network problem. Try again.",not_allowed:"This account is not allowed",server:"Server error. Try again."};
@@ -183,7 +188,8 @@ function toast(m){const t=$("toast");t.textContent=m;t.className="on";clearTimeo
 const errOf=j=>ERR[(j&&j.result&&j.result.error)||(j&&j.error)]||"Something went wrong";
 const bad=j=>!j||j.error||(j.result&&j.result.error);
 async function api(action,extra,hold){
- let j;if(PREVIEW){j=demo(action,extra)}else try{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({initData:(tg&&tg.initData)||"",action},extra||{}))});j=await r.json()}catch(e){j={error:"network"}}
+ let j;if(PREVIEW){j=demo(action,extra)}else try{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({initData:(tg&&tg.initData)||"",action,device:DEV,fp:FP},extra||{}))});j=await r.json()}catch(e){j={error:"network"}}
+ if(j&&((j.result&&j.result.error==="device_limit")||(j.state&&j.state.dup_blocked))){showDup()}
  if(j&&j.result&&j.result.need_join){showJoin(j.result.need_join);j.result.error="must_join"}
  if(j&&j.state&&!j.state.error){if(hold)PEND=j.state;else ST=j.state}
  return j}
@@ -221,6 +227,17 @@ function demo(a,x){const S=JSON.parse(JSON.stringify(ST)),r={},rnd=n=>Math.floor
  else if(a==="adClaim"){const c=((S.cfg||{}).ads||{}).reward||10;S.ads_today=(S.ads_today||0)+1;S.balance+=c;r.reward=c}
  else if(a==="referrer"){S.can_set_ref=false}
  return {result:r,state:S}}
+function devId(){let d="";try{d=localStorage.getItem("ff_dev")||""}catch(e){}
+ if(!d){const m=document.cookie.match(/(?:^|; )ff_dev=([A-Za-z0-9_-]+)/);if(m)d=m[1]}
+ if(!d){d=((window.crypto&&crypto.randomUUID)?crypto.randomUUID():(Date.now().toString(36)+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2))).replace(/[^A-Za-z0-9_-]/g,"");while(d.length<16)d+=Math.random().toString(36).slice(2)}
+ try{localStorage.setItem("ff_dev",d)}catch(e){}
+ try{document.cookie="ff_dev="+d+"; max-age=63072000; path=/; SameSite=None; Secure"}catch(e){}
+ return d}
+function fpHash(){try{const c=document.createElement("canvas");c.width=200;c.height=30;const x=c.getContext("2d");x.textBaseline="top";x.font="14px Arial";x.fillText("FrogFarm fp",2,2);
+ const s=[navigator.userAgent,screen.width+"x"+screen.height,screen.colorDepth,devicePixelRatio,new Date().getTimezoneOffset(),navigator.language,navigator.hardwareConcurrency,navigator.deviceMemory,navigator.platform,c.toDataURL()].join("|");
+ let a=5381,b=52711;for(let i=0;i<s.length;i++){const ch=s.charCodeAt(i);a=((a<<5)+a)^ch;b=((b<<5)+b)^ch}return (a>>>0).toString(16)+(b>>>0).toString(16)}catch(e){return ""}}
+const DEV=PREVIEW?"":devId(),FP=PREVIEW?"":fpHash();
+function showDup(){if($("dupgate"))return;document.body.insertAdjacentHTML("beforeend",'<div id="dupgate" style="position:fixed;inset:0;z-index:50;background:rgba(2,14,8,.97);display:flex;align-items:center;justify-content:center;padding:18px"><div class="card" style="max-width:380px;width:100%;text-align:center"><div style="font-size:46px">📱</div><h3 style="margin:6px 0">One account per device</h3><p>Another Telegram account is already using FROG FARM on this phone, so this account cannot earn. Please open the app with your first account.</p><p>If this is a mistake, contact us in our channel.</p></div></div>')}
 if(!PREVIEW&&(!tg||!tg.initData)){document.body.insertAdjacentHTML("beforeend",'<div id="gate" style="position:fixed;inset:0;z-index:30;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px"><img src="'+$("dog").src+'" style="width:110px;border-radius:50%"><h3>Open this app from Telegram</h3><p>This app only works inside the FROG FARM bot.</p><a href="'+CFG.bot+'" style="color:#000;background:#fff;padding:12px 22px;border-radius:99px;font-weight:800;text-decoration:none;margin-top:10px">Open the bot</a></div>')}
 
 function render(){
@@ -289,7 +306,19 @@ document.addEventListener("click",e=>{const id=e.target.dataset&&e.target.datase
 $("nav").onclick=e=>{const b=e.target.closest("b");if(!b)return;
  document.querySelectorAll("nav b").forEach(x=>x.classList.toggle("on",x===b));
  document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.t));window.scrollTo(0,0)};
-function go(t){document.querySelector('nav b[data-t="'+t+'"]').click()}
+function go(t){const b=document.querySelector('nav b[data-t="'+t+'"]');if(b){b.click();return}
+ document.querySelectorAll("nav b").forEach(x=>x.classList.remove("on"));document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===t));window.scrollTo(0,0);if(t==="lb")loadLb()}
+let LB=null,lbTab=1,lbAt=0;
+async function loadLb(){if(PREVIEW){LB={earners:[{name:"Ad***",score:48200},{name:"To***",score:31950},{name:"Fr***",score:12400,me:true},{name:"Em***",score:9800}],inviters:[{name:"To***",score:42},{name:"Ad***",score:31},{name:"Fr***",score:5,me:true}],my_earned:12400,my_earn_rank:3,my_friends:5,my_inv_rank:3};drawLb();return}
+ if(LB&&Date.now()-lbAt<60000){drawLb();return}
+ const j=await api("leaderboard");if(bad(j)){toast(errOf(j));return}LB=j.result;lbAt=Date.now();drawLb()}
+function drawLb(){if(!LB)return;const rows=lbTab===1?LB.earners:LB.inviters,unit=lbTab===1?"FROGS":"friends";
+ $("lbT1").className="btn "+(lbTab===1?"primary":"secondary");$("lbT2").className="btn "+(lbTab===2?"primary":"secondary");
+ const rank=lbTab===1?LB.my_earn_rank:LB.my_inv_rank,mine=lbTab===1?LB.my_earned:LB.my_friends;
+ $("lbMe").innerHTML=`<div class="irow"><div class="iconbox">🐸</div><div class="grow"><h4>Your rank</h4><p>${rank?"#"+fmt(rank):"Not ranked yet"} · ${fmt(mine)} ${unit}</p></div></div>`;
+ const medal=i=>["🥇","🥈","🥉"][i]||("#"+(i+1));
+ $("lbList").innerHTML=rows.length?rows.map((r,i)=>`<div class="row"${r.me?' style="background:rgba(var(--glow),.14);border-radius:10px;padding-left:8px;padding-right:8px"':""}><span><b>${medal(i)}</b> &nbsp;${esc(r.name)}${r.me?" (you)":""}</span><b>${fmt(r.score)} <small style="color:var(--mute);font-weight:400">${unit}</small></b></div>`).join(""):"<p>No one is ranked yet. Be the first!</p>"}
+$("lbT1").onclick=()=>{lbTab=1;drawLb()};$("lbT2").onclick=()=>{lbTab=2;drawLb()};
 document.querySelectorAll("[data-go]").forEach(e=>e.onclick=()=>go(e.dataset.go));
 
 // Wheel: the server picks the prize, the wheel just lands on it
