@@ -96,6 +96,7 @@ nav b.on em{text-shadow:0 0 10px rgba(var(--glow),.8)}
 .cg div.up{background:var(--lime);color:#17351e}
 .big{aspect-ratio:auto;height:150px;font-size:24px;font-weight:800;margin-top:14px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.big-number{font-size:24px;font-weight:850}.muted{color:var(--mute);font-size:12px}
+.rl{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--line);align-items:flex-start}.rl span{font-size:16px;line-height:1.3}.rl b{font-size:14px}.rl small{display:block;color:var(--mute);font-size:12px;font-weight:400;margin-top:2px;line-height:1.4}.rl.ok b{color:var(--lime)}
 @media (prefers-reduced-motion:reduce){#pond{animation:none}#wheel{transition:none}}
 </style></head>
 <body>
@@ -159,7 +160,7 @@ nav b.on em{text-shadow:0 0 10px rgba(var(--glow),.8)}
   <div class="irow" style="justify-content:space-between;margin:6px 0"><span class="muted">You will receive</span><b id="swPrev">0 TON</b></div>
   <button id="swBtn" class="full glow">Swap now</button></div>
  <div class="section-head"><h3>💎 Withdraw TON</h3></div>
- <div class="card"><p id="wdRules"></p>
+ <div class="card"><div id="wdAdsBox" class="notice" style="display:none;margin:0 0 12px"><div class="irow"><div class="grow"><b id="wdAdsTxt"></b><div class="bar"><u id="wdAdsBar"></u></div></div><button class="smallbtn adBtn">Watch</button></div></div><div id="wdRules"></div>
   <div class="field"><label for="amt">Amount in TON</label><input id="amt" type="number" inputmode="decimal" step="0.01" placeholder="e.g. 0.10"></div>
   <div class="field"><label for="wal">Your TON wallet address</label><input id="wal" placeholder="UQ… or EQ…"></div>
   <p id="calc"></p><button id="wdBtn" class="full">Request withdrawal</button></div>
@@ -185,7 +186,7 @@ let ST={balance:0,last_claim:null,ci_streak:0,ci_done_today:false,tasks:[],plays
 const U=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user, uid=U?U.id:"", uname=U?U.first_name:"friend";
 const fmt=n=>Math.round(n).toLocaleString();
 function toast(m){const t=$("toast");t.textContent=m;t.className="on";clearTimeout(t._);t._=setTimeout(()=>t.className="",2400)}
-const errOf=j=>ERR[(j&&j.result&&j.result.error)||(j&&j.error)]||"Something went wrong";
+const errOf=j=>{const r=j&&j.result;if(r&&r.error==="need_ads")return "Watch "+r.need+" more ad"+(r.need>1?"s":"")+" to withdraw";return ERR[(r&&r.error)||(j&&j.error)]||"Something went wrong"};
 const bad=j=>!j||j.error||(j.result&&j.result.error);
 async function api(action,extra,hold){
  let j;if(PREVIEW){j=demo(action,extra)}else try{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({initData:(tg&&tg.initData)||"",action,device:DEV,fp:FP},extra||{}))});j=await r.json()}catch(e){j={error:"network"}}
@@ -214,7 +215,7 @@ const MXP=g=>Math.max(0,...(((CC().prizes||{})[g])||[0]));
 const left=g=>PD()-((ST.plays||{})[g]||0);
 
 const PREVIEW=location.hash==="#preview"||!!window.__PREVIEW;
-if(PREVIEW){loaded=true;ST={balance:1250,ton:0.0417,ads_today:3,cfg:{claim:{amount:200,hours:4},checkin:[20,30,40,50,60,80,120],referral:{open:330,tasks:70,withdraw:100},games_per_day:2,prizes:{wheel:[5,10,15,20,30,50],bones:[0,5,10,15,20],memory:[0,10,30],cups:[2,15],dig:[0,5,10,30],tap:[5,10,15,20],react:[0,5,10,20]},ads:{enabled:true,reward:10,daily_cap:20,cooldown_sec:30,min_watch_sec:5,verify:false},swap:{frogs:600,ton:0.01,fee:0.15,min_frogs:600},withdraw:{min:0.05,max:0.2,fee:0}},last_claim:null,ci_streak:2,ci_done_today:false,my_id:123456,can_set_ref:true,task_list:[{id:"t1",title:"Join our Telegram channel",url:"#",reward:300},{id:"t2",title:"Subscribe on YouTube",url:"#",reward:300},{id:"t3",title:"Join our WhatsApp channel",url:"#",reward:300}],tasks:["t3"],plays:{},friends:[{name:"Ada",tasks:true,withdrawn:false},{name:"Tunde",tasks:false,withdrawn:false}],withdrawals:[]};
+if(PREVIEW){loaded=true;ST={balance:1250,ton:0.0417,ads_today:3,ads_wd:{required:10,watched:3},cfg:{claim:{amount:200,hours:4},checkin:[20,30,40,50,60,80,120],referral:{open:330,tasks:70,withdraw:100},games_per_day:2,prizes:{wheel:[5,10,15,20,30,50],bones:[0,5,10,15,20],memory:[0,10,30],cups:[2,15],dig:[0,5,10,30],tap:[5,10,15,20],react:[0,5,10,20]},ads:{enabled:true,reward:10,daily_cap:20,cooldown_sec:30,min_watch_sec:5,verify:false},swap:{frogs:600,ton:0.01,fee:0.15,min_frogs:600},withdraw:{min:0.05,max:0.2,fee:0}},last_claim:null,ci_streak:2,ci_done_today:false,my_id:123456,can_set_ref:true,task_list:[{id:"t1",title:"Join our Telegram channel",url:"#",reward:300},{id:"t2",title:"Subscribe on YouTube",url:"#",reward:300},{id:"t3",title:"Join our WhatsApp channel",url:"#",reward:300}],tasks:["t3"],plays:{},friends:[{name:"Ada",tasks:true,withdrawn:false},{name:"Tunde",tasks:false,withdrawn:false}],withdrawals:[]};
  document.body.insertAdjacentHTML("beforeend",'<div id="pv">PREVIEW</div>')}
 function demo(a,x){const S=JSON.parse(JSON.stringify(ST)),r={},rnd=n=>Math.floor(Math.random()*n);
  if(a==="claim"){S.last_claim=new Date().toISOString();S.balance+=200;r.reward=200}
@@ -222,9 +223,9 @@ function demo(a,x){const S=JSON.parse(JSON.stringify(ST)),r={},rnd=n=>Math.floor
  else if(a==="task"){const t=S.task_list.find(k=>k.id===x.task);if(t){S.tasks.push(t.id);S.balance+=t.reward;r.reward=t.reward}}
  else if(a==="game"){r.reward=x.game==="wheel"?WP()[rnd(WP().length)]:[0,5,5,10,15,20][rnd(6)];S.plays[x.game]=(S.plays[x.game]||0)+1;S.balance+=r.reward}
  else if(a==="swap"){const s=swapCfg();if(x.amount<s.min_frogs)r.error="below_min_swap";else if(x.amount>S.balance)r.error="insufficient";else{const t=x.amount/s.frogs*s.ton*(1-s.fee);S.balance-=x.amount;S.ton+=t;r.ok=true;r.ton=t}}
- else if(a==="withdraw"){const w=wdCfg();if(x.amount<w.min)r.error="below_min";else if(x.amount>w.max)r.error="above_max";else if(x.amount>S.ton)r.error="insufficient_ton";else if(!/^(EQ|UQ)[A-Za-z0-9_-]{46}$/.test(x.wallet))r.error="bad_wallet";else{S.ton-=x.amount;const n=x.amount*(1-w.fee);S.withdrawals.push({amount:x.amount,net:n,status:"pending",at:new Date().toISOString()});r.ok=true;r.net=n}}
+ else if(a==="withdraw"){const w=wdCfg();if(x.amount<w.min)r.error="below_min";else if(x.amount>w.max)r.error="above_max";else if(x.amount>S.ton)r.error="insufficient_ton";else if(S.ads_wd&&S.ads_wd.watched<S.ads_wd.required){r.error="need_ads";r.need=S.ads_wd.required-S.ads_wd.watched}else if(!/^(EQ|UQ)[A-Za-z0-9_-]{46}$/.test(x.wallet))r.error="bad_wallet";else{S.ton-=x.amount;if(S.ads_wd)S.ads_wd.watched=0;const n=x.amount*(1-w.fee);S.withdrawals.push({amount:x.amount,net:n,status:"pending",at:new Date().toISOString()});r.ok=true;r.net=n}}
  else if(a==="adStart"){r.token="demo"}
- else if(a==="adClaim"){const c=((S.cfg||{}).ads||{}).reward||10;S.ads_today=(S.ads_today||0)+1;S.balance+=c;r.reward=c}
+ else if(a==="adClaim"){const c=((S.cfg||{}).ads||{}).reward||10;S.ads_today=(S.ads_today||0)+1;if(S.ads_wd)S.ads_wd.watched++;S.balance+=c;r.reward=c}
  else if(a==="referrer"){S.can_set_ref=false}
  return {result:r,state:S}}
 function devId(){let d="";try{d=localStorage.getItem("ff_dev")||""}catch(e){}
@@ -267,6 +268,8 @@ function render(){
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const adCfg=()=>((ST.cfg&&ST.cfg.ads)||{enabled:true,reward:10,daily_cap:20});
 function adUI(){const c=adCfg(),n=ST.ads_today||0,full=n>=c.daily_cap;
+ {const w=ST.ads_wd||{required:0,watched:0},bx=$("wdAdsBox"),need=w.required>0;bx.style.display=need?"":"none";
+  if(need){const done=Math.min(w.watched,w.required);$("wdAdsTxt").textContent=done>=w.required?"✅ Ads done. You can withdraw now.":"📺 Watch "+w.required+" ads to unlock withdrawal: "+done+" of "+w.required;$("wdAdsBar").style.width=(done/w.required*100)+"%"}}
  document.querySelectorAll(".adcard").forEach(e=>e.style.display=c.enabled?"":"none");
  document.querySelectorAll(".adInfo").forEach(e=>e.textContent="+"+c.reward+" FROGS · "+n+" of "+c.daily_cap+" today");
  document.querySelectorAll(".adBtn").forEach(b=>{b.disabled=full||busy||!loaded;b.textContent=full?"Done today":"Watch"})}
@@ -287,11 +290,25 @@ const wdCfg=()=>((ST.cfg&&ST.cfg.withdraw)||{min:0.05,max:0.2,fee:0});
 const swapOut=f=>{const s=swapCfg();return f/s.frogs*s.ton*(1-s.fee)};
 const t4=n=>(Math.floor((+n||0)*10000+1e-6)/10000).toFixed(4);
 function calc(){const a=+$("amt").value||0,w=wdCfg();$("calc").textContent=a?`Fee ${t4(a*w.fee)} TON. You receive ${t4(a*(1-w.fee))} TON.`:""}
+function wdChecks(){const w=wdCfg(),aw=ST.ads_wd||{required:0,watched:0},amt=+$("amt").value||0,wal=$("wal").value.trim();
+ const pend=(ST.withdrawals||[]).some(x=>x.status==="pending");
+ const okWallet=/^(EQ|UQ|kQ|0Q)[A-Za-z0-9_-]{46}$/.test(wal)||/^-?[0-9]:[0-9a-fA-F]{64}$/.test(wal);
+ return {w,aw,amt,wal,pend,okWallet,haveTon:(ST.ton||0)>=w.min-1e-9,ads:aw.required<=0||aw.watched>=aw.required}}
+function wdModal(html,actions){let m=$("wdm");
+ if(!m){document.body.insertAdjacentHTML("beforeend",'<div id="wdm" style="position:fixed;inset:0;z-index:35;background:rgba(1,12,7,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:16px"><div class="card" style="max-width:380px;width:100%;margin:0"><div id="wdmBody"></div><div id="wdmBtns"></div></div></div>');m=$("wdm");m.onclick=e=>{if(e.target===m)m.style.display="none"}}
+ $("wdmBody").innerHTML=html;$("wdmBtns").innerHTML=actions.map((a,i)=>`<button class="full ${a.cls||""}" data-wa="${i}">${a.t}</button>`).join("");
+ $("wdmBtns").onclick=e=>{const i=e.target.dataset&&e.target.dataset.wa;if(i==null||i==="")return;m.style.display="none";if(actions[i].f)actions[i].f()};m.style.display="flex"}
 function cashUI(){const s=swapCfg(),w=wdCfg();
  $("swF").textContent=fmt(ST.balance);$("swT").textContent=t4(ST.ton||0);
  $("rateText").textContent=`${fmt(s.frogs)} FROGS = ${s.ton} TON. Swap fee ${Math.round(s.fee*100)}%. Minimum swap ${fmt(s.min_frogs)} FROGS.`;
  const f=+$("swAmt").value||0;$("swPrev").textContent=t4(f>=s.min_frogs?swapOut(f):0)+" TON";
- $("wdRules").innerHTML=`Minimum <b>${w.min}</b> TON, maximum <b>${w.max}</b> TON.${w.fee>0?` A <b>${Math.round(w.fee*100)}%</b> fee applies.`:""} Swap your FROGS to TON first.`;
+ {const c=wdChecks(),row=(ok,t,sub)=>`<div class="rl ${ok?"ok":""}"><span>${ok?"✅":"⭕"}</span><div><b>${t}</b>${sub?`<small>${sub}</small>`:""}</div></div>`;
+  $("wdRules").innerHTML=`<h4 style="margin:0 0 4px">Withdrawal rules</h4>`+
+   row(c.haveTon,`Have at least ${w.min} TON`,`Each request must be between ${w.min} and ${w.max} TON. You have ${t4(ST.ton||0)} TON. Swap FROGS to TON above.`)+
+   (c.aw.required>0?row(c.ads,`Watch ${c.aw.required} ads before each request`,c.ads?"Done for this request.":`${Math.min(c.aw.watched,c.aw.required)} of ${c.aw.required} watched so far.`):"")+
+   row(!c.pend,"One request at a time",c.pend?"You have a pending request. Wait until it is paid or rejected.":"Your last request must be paid or rejected before a new one.")+
+   row(c.okWallet,"Use a valid TON wallet address","It starts with UQ or EQ. One wallet can only be used by one account.")+
+   `<small class="muted" style="display:block;margin-top:8px">${w.fee>0?`Withdrawal fee: ${Math.round(w.fee*100)}%. `:"No withdrawal fee. "}Requests are checked and paid to your wallet by our team.</small>`}
  $("approx").textContent="≈ "+t4(swapOut(ST.balance))+" TON after the swap fee";
  calc()}
 
@@ -356,10 +373,21 @@ $("copyBtn").onclick=()=>{const v=$("refLink").value;
 
 // Withdraw
 $("refBtn").onclick=()=>act($("refBtn"),"referrer",{code:$("refCode").value.trim()},()=>"Invite code applied");
-$("amt").oninput=calc;
-$("wdBtn").onclick=async()=>{if(busy)return;busy=true;
- const j=await api("withdraw",{amount:+$("amt").value,wallet:$("wal").value.trim()});busy=false;
- if(bad(j))toast(errOf(j));else{$("amt").value="";toast("Withdrawal requested. You will get "+t4(j.result.net)+" TON.")}render()};
+$("amt").oninput=cashUI;$("wal").oninput=cashUI;
+async function doWithdraw(){if(busy)return;busy=true;const j=await api("withdraw",{amount:+$("amt").value,wallet:$("wal").value.trim()});busy=false;
+ if(bad(j))toast(errOf(j));else{$("amt").value="";toast("Withdrawal requested. You will get "+t4(j.result.net)+" TON.")}render()}
+$("wdBtn").onclick=()=>{if(busy)return;const c=wdChecks(),miss=[],rest=c.aw.required-c.aw.watched;
+ if(!c.amt||c.amt<c.w.min-1e-9)miss.push(`Enter an amount of at least ${c.w.min} TON`);
+ else if(c.amt>c.w.max+1e-9)miss.push(`The most you can withdraw at once is ${c.w.max} TON`);
+ if(!c.haveTon||c.amt>(ST.ton||0)+1e-9)miss.push(`You need more TON. You have ${t4(ST.ton||0)} TON. Swap some FROGS first.`);
+ if(!c.ads)miss.push(`Watch ${rest} more ad${rest>1?"s":""} (${c.aw.watched} of ${c.aw.required} done)`);
+ if(c.pend)miss.push("Wait until your pending request is paid or rejected");
+ if(!c.okWallet)miss.push("Enter a valid TON wallet address (starts with UQ or EQ)");
+ if(miss.length){const acts=[];if(!c.ads)acts.push({t:"📺 Watch ads",cls:"glow",f:watchAd});if(!c.haveTon)acts.push({t:"🔄 Go to swap",f:()=>$("swAmt").scrollIntoView({behavior:"smooth",block:"center"})});acts.push({t:"OK",cls:"alt"});
+  return wdModal(`<h3 style="margin:0 0 6px">Not ready yet</h3><p>Finish these first:</p>`+miss.map(m=>`<div class="rl"><span>⭕</span><div><b>${esc(m)}</b></div></div>`).join(""),acts)}
+ const fee=c.amt*c.w.fee,net=c.amt-fee,short=c.wal.slice(0,6)+"…"+c.wal.slice(-6);
+ wdModal(`<h3 style="margin:0 0 6px">Confirm withdrawal</h3><div class="row"><span>Amount</span><b>${t4(c.amt)} TON</b></div>${c.w.fee>0?`<div class="row"><span>Fee (${Math.round(c.w.fee*100)}%)</span><b>${t4(fee)} TON</b></div>`:""}<div class="row"><span>You receive</span><b style="color:var(--lime)">${t4(net)} TON</b></div><div class="row"><span>To wallet</span><b>${esc(short)}</b></div><p style="margin-top:8px">Check the wallet address carefully. Payments cannot be reversed.</p>`,
+  [{t:"Confirm withdrawal",cls:"glow",f:doWithdraw},{t:"Cancel",cls:"alt"}])};
 $("swAmt").oninput=cashUI;
 $("swBtn").onclick=async()=>{if(busy)return;busy=true;const j=await api("swap",{amount:Math.floor(+$("swAmt").value)});busy=false;
  if(bad(j))toast(errOf(j));else{$("swAmt").value="";toast("Swapped! You got "+t4(j.result.ton)+" TON")}render()};
