@@ -77,8 +77,8 @@ input:focus{border-color:var(--green);box-shadow:0 0 14px rgba(var(--glow),.4)}
 #pin{text-align:center;font-size:26px;margin-bottom:-22px;position:relative;z-index:2;color:var(--lime)}
 #grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
 #grid div{aspect-ratio:1;background:rgba(3,20,12,.6);border:1px solid var(--line);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:44px}
-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(490px,100%);z-index:5;display:grid;grid-template-columns:repeat(5,1fr);padding:9px 7px calc(9px + env(safe-area-inset-bottom));background:rgba(5,24,15,.88);border-top:1px solid rgba(var(--glow),.4);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 -6px 30px rgba(var(--glow),.18)}
-nav b{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;font-size:10px;font-weight:600;color:#92b39b;border-radius:12px}
+nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(490px,100%);z-index:5;display:grid;grid-template-columns:repeat(6,1fr);padding:9px 7px calc(9px + env(safe-area-inset-bottom));background:rgba(5,24,15,.88);border-top:1px solid rgba(var(--glow),.4);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 -6px 30px rgba(var(--glow),.18)}
+nav b{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;font-size:9.5px;font-weight:600;color:#92b39b;border-radius:12px}
 nav b span{font-size:21px;filter:grayscale(.6)}
 nav b em{font-style:normal}
 nav b.on{color:var(--lime)}nav b.on span{filter:none;text-shadow:0 0 14px rgba(var(--glow),.9)}
@@ -139,6 +139,12 @@ nav b.on em{text-shadow:0 0 10px rgba(var(--glow),.8)}
  <div class="card"><h4>🪰 Fly catch</h4><p>Tap the flies for 15 seconds, then see your prize (up to <span id="boneMax">20</span> FROGS).</p><p id="boneInfo"></p><div id="grid"></div><button id="boneBtn" class="full">Start</button></div>
 </section>
 
+<section id="ads"><div class="section-head"><h3>📺 Watch &amp; earn</h3><span class="pill" id="adsPill">0 ads watched</span></div>
+ <div class="card"><div class="irow"><div class="iconbox">📺</div><div class="grow"><h4>Watch an ad</h4><p class="adInfo">+10 FROGS</p></div></div><button class="full glow adBtn">Watch ad</button></div>
+ <div class="section-head"><h3>🎁 Ad milestones</h3></div>
+ <p style="color:var(--mute);font-size:13px;margin:0 1px 10px">Keep watching to unlock big TON rewards. Each reward can be claimed once.</p>
+ <div id="msList"></div></section>
+
 <section id="lb"><div class="section-head"><h3>🏆 Leaderboard</h3><button data-go="home">← Back</button></div>
  <div class="actions" style="margin:0 0 10px"><button class="btn primary" id="lbT1">Top earners</button><button class="btn secondary" id="lbT2">Top inviters</button></div>
  <div class="card" id="lbMe"></div><div class="card" id="lbList"><p>Loading…</p></div></section>
@@ -168,7 +174,7 @@ nav b.on em{text-shadow:0 0 10px rgba(var(--glow),.8)}
 </main>
 </div>
 <nav id="nav">
- <b data-t="home" class="on"><span>🏡</span><em>Home</em></b><b data-t="tasks"><span>🌱</span><em>Tasks</em></b><b data-t="invite"><span>👥</span><em>Invite</em></b><b data-t="games"><span>🎮</span><em>Games</em></b><b data-t="cash"><span>💎</span><em>Wallet</em></b>
+ <b data-t="home" class="on"><span>🏡</span><em>Home</em></b><b data-t="tasks"><span>🌱</span><em>Tasks</em></b><b data-t="invite"><span>👥</span><em>Invite</em></b><b data-t="ads"><span>📺</span><em>Ads</em></b><b data-t="games"><span>🎮</span><em>Games</em></b><b data-t="cash"><span>💎</span><em>Wallet</em></b>
 </nav>
 <script>
 const $=id=>document.getElementById(id), tg=window.Telegram&&Telegram.WebApp;
@@ -178,7 +184,7 @@ const API="https://ytrvqpjdghvjcjwtscyv.supabase.co/functions/v1/dogs-api";
 const BOT_USERNAME="FROGFARM01BOT"; // <<< CHANGE THIS to your bot username (without @)
 const CFG={bot:"https://t.me/"+BOT_USERNAME,app:"", /* app: put your Mini App short name here only if you made it with /newapp */ ref:{open:330,tasks:70,withdraw:100},min:5000,max:7000,fee:0.15,perDay:2,claim:200,claimHours:4,
  wheel:[5,10,15,20,30,50],ci:[20,30,40,50,60,80,120]};
-const ERR={too_soon:"Not ready yet",already_done:"Already done",must_join:"Join our channel first",device_limit:"One account per device. Another account on this phone is already using the app.",ads_disabled:"Ads are paused right now",ad_cap:"Daily ad limit reached. Come back tomorrow.",ad_cooldown:"Wait a moment before the next ad",ad_too_fast:"Please watch the whole ad to earn",ad_unverified:"The ad could not be confirmed. Try again.",ad_expired:"That ad expired. Try again.",bad_token:"That ad could not be counted. Try again.",bad_code:"That invite code is not valid",wallet_used:"This wallet is already used by another account",too_late:"Too late. Codes only work before you earn FROGS",no_plays_left:"No plays left today",not_joined:"Join the channel first",
+const ERR={too_soon:"Not ready yet",already_done:"Already done",not_reached:"Keep watching. You have not reached this milestone yet.",milestones_off:"Ad rewards are paused right now",bad_milestone:"That reward is not available",must_join:"Join our channel first",device_limit:"One account per device. Another account on this phone is already using the app.",ads_disabled:"Ads are paused right now",ad_cap:"Daily ad limit reached. Come back tomorrow.",ad_cooldown:"Wait a moment before the next ad",ad_too_fast:"Please watch the whole ad to earn",ad_unverified:"The ad could not be confirmed. Try again.",ad_expired:"That ad expired. Try again.",bad_token:"That ad could not be counted. Try again.",bad_code:"That invite code is not valid",wallet_used:"This wallet is already used by another account",too_late:"Too late. Codes only work before you earn FROGS",no_plays_left:"No plays left today",not_joined:"Join the channel first",
  below_min:"Below the minimum withdrawal",above_max:"Above the maximum withdrawal",below_min_swap:"Below the minimum swap",insufficient_ton:"Not enough TON. Swap some FROGS first.",
  insufficient:"Not enough FROGS",bad_wallet:"Enter a valid TON wallet address (starts with UQ or EQ)",bad_amount:"Enter a valid amount",pending_exists:"You already have a pending withdrawal",
  unauthorized:"Open this app from Telegram",network:"Network problem. Try again.",not_allowed:"This account is not allowed",server:"Server error. Try again."};
@@ -215,7 +221,7 @@ const MXP=g=>Math.max(0,...(((CC().prizes||{})[g])||[0]));
 const left=g=>PD()-((ST.plays||{})[g]||0);
 
 const PREVIEW=location.hash==="#preview"||!!window.__PREVIEW;
-if(PREVIEW){loaded=true;ST={balance:1250,ton:0.0417,ads_today:3,ads_wd:{required:10,watched:3},cfg:{claim:{amount:200,hours:4},checkin:[20,30,40,50,60,80,120],referral:{open:330,tasks:70,withdraw:100},games_per_day:2,prizes:{wheel:[5,10,15,20,30,50],bones:[0,5,10,15,20],memory:[0,10,30],cups:[2,15],dig:[0,5,10,30],tap:[5,10,15,20],react:[0,5,10,20]},ads:{enabled:true,reward:10,daily_cap:20,cooldown_sec:30,min_watch_sec:5,verify:false},swap:{frogs:600,ton:0.01,fee:0.15,min_frogs:600},withdraw:{min:0.05,max:0.2,fee:0}},last_claim:null,ci_streak:2,ci_done_today:false,my_id:123456,can_set_ref:true,task_list:[{id:"t1",title:"Join our Telegram channel",url:"#",reward:300},{id:"t2",title:"Subscribe on YouTube",url:"#",reward:300},{id:"t3",title:"Join our WhatsApp channel",url:"#",reward:300}],tasks:["t3"],plays:{},friends:[{name:"Ada",tasks:true,withdrawn:false},{name:"Tunde",tasks:false,withdrawn:false}],withdrawals:[]};
+if(PREVIEW){loaded=true;ST={balance:1250,ton:0.0417,ads_today:3,ads_ms:{enabled:true,total:62,list:[{ads:100,ton:1,claimed:false},{ads:1000,ton:20,claimed:false}]},ads_wd:{required:10,watched:3},cfg:{claim:{amount:200,hours:4},checkin:[20,30,40,50,60,80,120],referral:{open:330,tasks:70,withdraw:100},games_per_day:2,prizes:{wheel:[5,10,15,20,30,50],bones:[0,5,10,15,20],memory:[0,10,30],cups:[2,15],dig:[0,5,10,30],tap:[5,10,15,20],react:[0,5,10,20]},ads:{enabled:true,reward:10,daily_cap:20,cooldown_sec:30,min_watch_sec:5,verify:false},swap:{frogs:600,ton:0.01,fee:0.15,min_frogs:600},withdraw:{min:0.05,max:0.2,fee:0}},last_claim:null,ci_streak:2,ci_done_today:false,my_id:123456,can_set_ref:true,task_list:[{id:"t1",title:"Join our Telegram channel",url:"#",reward:300},{id:"t2",title:"Subscribe on YouTube",url:"#",reward:300},{id:"t3",title:"Join our WhatsApp channel",url:"#",reward:300}],tasks:["t3"],plays:{},friends:[{name:"Ada",tasks:true,withdrawn:false},{name:"Tunde",tasks:false,withdrawn:false}],withdrawals:[]};
  document.body.insertAdjacentHTML("beforeend",'<div id="pv">PREVIEW</div>')}
 function demo(a,x){const S=JSON.parse(JSON.stringify(ST)),r={},rnd=n=>Math.floor(Math.random()*n);
  if(a==="claim"){S.last_claim=new Date().toISOString();S.balance+=200;r.reward=200}
@@ -225,7 +231,8 @@ function demo(a,x){const S=JSON.parse(JSON.stringify(ST)),r={},rnd=n=>Math.floor
  else if(a==="swap"){const s=swapCfg();if(x.amount<s.min_frogs)r.error="below_min_swap";else if(x.amount>S.balance)r.error="insufficient";else{const t=x.amount/s.frogs*s.ton*(1-s.fee);S.balance-=x.amount;S.ton+=t;r.ok=true;r.ton=t}}
  else if(a==="withdraw"){const w=wdCfg();if(x.amount<w.min)r.error="below_min";else if(x.amount>w.max)r.error="above_max";else if(x.amount>S.ton)r.error="insufficient_ton";else if(S.ads_wd&&S.ads_wd.watched<S.ads_wd.required){r.error="need_ads";r.need=S.ads_wd.required-S.ads_wd.watched}else if(!/^(EQ|UQ)[A-Za-z0-9_-]{46}$/.test(x.wallet))r.error="bad_wallet";else{S.ton-=x.amount;if(S.ads_wd)S.ads_wd.watched=0;const n=x.amount*(1-w.fee);S.withdrawals.push({amount:x.amount,net:n,status:"pending",at:new Date().toISOString()});r.ok=true;r.net=n}}
  else if(a==="adStart"){r.token="demo"}
- else if(a==="adClaim"){const c=((S.cfg||{}).ads||{}).reward||10;S.ads_today=(S.ads_today||0)+1;if(S.ads_wd)S.ads_wd.watched++;S.balance+=c;r.reward=c}
+ else if(a==="adClaim"){const c=((S.cfg||{}).ads||{}).reward||10;S.ads_today=(S.ads_today||0)+1;if(S.ads_ms)S.ads_ms.total++;if(S.ads_wd)S.ads_wd.watched++;S.balance+=c;r.reward=c}
+ else if(a==="adMilestone"){const m=(S.ads_ms||{list:[]}).list.find(z=>z.ads===x.ads);if(m&&S.ads_ms.total>=m.ads&&!m.claimed){m.claimed=true;S.ton+=m.ton;r.ok=true;r.ton=m.ton}else r.error="not_reached"}
  else if(a==="referrer"){S.can_set_ref=false}
  return {result:r,state:S}}
 function devId(){let d="";try{d=localStorage.getItem("ff_dev")||""}catch(e){}
@@ -257,7 +264,7 @@ function render(){
  {const ap=(ST.cfg&&ST.cfg.app)||{};$("refLink").value="https://t.me/"+(ap.bot||BOT_USERNAME)+(ap.short?"/"+ap.short:"")+"?startapp="+uid}
  const fr=ST.friends||[];
  $("refList").innerHTML=fr.length?fr.map(r=>`<div class="row"><span>${esc(r.name||"Friend")}</span><span class="tag ${r.withdrawn?'ok':''}">${r.withdrawn?"Withdrawn":r.tasks?"Tasks done":"Opened"}</span></div>`).join(""):"<p>No friends yet. Share your link to start earning.</p>";
- buildWheel();dmUI();adUI();cashUI();
+ buildWheel();dmUI();adUI();msUI();cashUI();
  const wd=ST.withdrawals||[];
  $("hist").innerHTML=wd.length?wd.slice().reverse().map(h=>`<div class="row"><span>${t4(h.amount)} TON<br><small style="color:var(--mute)">You get ${t4(h.net)} · ${String(h.at).slice(0,10)}</small></span><span class="tag ${h.status==="paid"?"ok":""}">${h.status==="paid"?"Paid":h.status==="rejected"?"Rejected":"Pending"}</span></div>`).join(""):"<p>No withdrawals yet.</p>";
  $("stF").textContent=fr.length;$("stT").textContent=(ST.task_list||[]).filter(k=>dn.includes(k.id)).length+"/"+(ST.task_list||[]).length;$("stW").textContent=t4(ST.ton||0);
@@ -267,6 +274,11 @@ function render(){
  gamesUI()}
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const adCfg=()=>((ST.cfg&&ST.cfg.ads)||{enabled:true,reward:10,daily_cap:20});
+function msUI(){const m=ST.ads_ms||{enabled:false,total:0,list:[]};$("adsPill").textContent=fmt(m.total||0)+" ads watched";
+ $("msList").innerHTML=(m.enabled&&(m.list||[]).length)?m.list.map(x=>{const t=m.total||0,pct=Math.min(100,Math.round(t/x.ads*100)),ready=t>=x.ads&&!x.claimed;
+  return `<div class="card"><div class="irow"><div class="iconbox">🎯</div><div class="grow"><h4>Watch ${fmt(x.ads)} ads</h4><p>Earn <b>${x.ton} TON</b> · ${fmt(Math.min(t,x.ads))} of ${fmt(x.ads)}</p></div>${x.claimed?'<span class="tag ok">Claimed</span>':`<button class="smallbtn" data-ms="${x.ads}"${ready?"":" disabled"}>${ready?"Claim":"Locked"}</button>`}</div><div class="bar"><u style="width:${pct}%"></u></div></div>`}).join(""):'<div class="empty"><div class="emoji">🎁</div>No milestones right now. Check back soon.</div>'}
+document.addEventListener("click",async e=>{const a=e.target.dataset&&e.target.dataset.ms;if(!a||e.target.disabled)return;e.target.disabled=true;
+ const j=await api("adMilestone",{ads:+a});if(bad(j))toast(errOf(j));else toast("🎉 +"+j.result.ton+" TON added to your wallet");render()});
 function adUI(){const c=adCfg(),n=ST.ads_today||0,full=n>=c.daily_cap;
  {const w=ST.ads_wd||{required:0,watched:0},bx=$("wdAdsBox"),need=w.required>0;bx.style.display=need?"":"none";
   if(need){const done=Math.min(w.watched,w.required);$("wdAdsTxt").textContent=done>=w.required?"✅ Ads done. You can withdraw now.":"📺 Watch "+w.required+" ads to unlock withdrawal: "+done+" of "+w.required;$("wdAdsBar").style.width=(done/w.required*100)+"%"}}
